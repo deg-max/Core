@@ -90,7 +90,7 @@
   .search-row { display: flex; gap: 10px; align-items: stretch; }
   .search-wrap { position: relative; flex: 1; min-width: 0; }
   .search-wrap input { padding-right: 48px; }
-  .search-row button.primary { height: auto; padding: 0 14px; white-space: nowrap; }
+  .search-row button.ghost { height: auto; padding: 0 14px; white-space: nowrap; }
   .clear {
     position: absolute; right: 8px; bottom: 9px;
     width: 40px; height: 40px; border: 0; background: none; color: var(--dim);
@@ -115,7 +115,8 @@
     line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
   }
   .big small { font-size: 0.45em; color: var(--dim); font-weight: 500; margin: 0 0.15em 0 0.05em; }
-  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .facts { display: flex; gap: 12px; }
+  .fact { flex: 1; min-width: 0; }
   .fact .k { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
   .fact .v { font-family: var(--mono); font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .fact.target { background: var(--signal); color: var(--on-signal); border-radius: 6px; padding: 8px 10px; }
@@ -168,9 +169,20 @@
   .step-fields { display: flex; flex-direction: column; gap: 12px; }
   .step-row { display: flex; gap: 8px; align-items: stretch; }
   .step-row .hours-wrap { flex: 1; min-width: 0; }
-  button.ghost.rm { height: auto; width: 52px; padding: 0; font-size: 22px; }
+  button.ghost.rm { height: auto; width: 44px; padding: 0; font-size: 22px; border-color: transparent; color: var(--dim); }
   .step-fields #addstep { align-self: flex-start; }
-  ul.parts .nsteps { font-weight: 500; color: var(--dim); white-space: nowrap; }
+  ul.parts .nsteps { display: block; font-size: 13px; font-weight: 500; color: var(--dim); }
+
+  /* Quiet text buttons for the things you rarely do. */
+  button.link {
+    background: none; border: 0; padding: 8px 2px; cursor: pointer;
+    font-family: var(--body); font-size: 15px; font-weight: 600; color: var(--dim);
+  }
+  button.link.danger.armed { color: var(--danger); }
+  .quiet { display: flex; gap: 18px; margin-top: -6px; }
+  .job-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .job-foot .left { font-family: var(--mono); font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .job-foot .left.over { color: var(--danger); }
 
   .note { font-size: 14px; color: var(--dim); margin: 0; }
   .note.err { color: var(--danger); }
@@ -185,7 +197,7 @@
   ul.parts { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
   ul.parts li { border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
   ul.parts button.row {
-    flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: baseline;
+    flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: baseline;
     background: none; border: 0; color: var(--ink); text-align: left; padding: 13px 4px; cursor: pointer;
     font-family: var(--mono); font-size: 16px;
   }
