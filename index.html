@@ -321,11 +321,13 @@
   function renderReadout() {
     var key = partKey(partInput.value);
     $("clear").hidden = !key;
-    if (!key) { readout.hidden = true; editing = false; return; }
+    if (adding) { renderAdd(); return; }
+    // The search bar only looks up saved parts; new ones go through Add part.
+    var saved = findPart(key);
+    if (!saved) { readout.hidden = true; editing = false; return; }
     readout.hidden = false;
 
-    var saved = findPart(key);
-    if (saved && !editing) {
+    if (!editing) {
       readout.innerHTML =
         '<div class="readout-head"><span class="part-tag">' + esc(saved.part) + '</span>' +
         '<span class="status">Saved · ' + esc(String(saved.hours)) + ' hr</span></div>' +
