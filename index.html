@@ -439,10 +439,11 @@
     db.collection("parts").doc(docId(key))
       .set({ part: key, hours: h, updatedAt: new Date().toISOString() })
       .then(function () {
-        saving = false; editing = false;
+        saving = false; editing = false; adding = false;
         // The snapshot listener refreshes the list; show the saved readout right away.
         if (!findPart(key)) parts.push({ part: key, hours: h });
         else findPart(key).hours = h;
+        partInput.value = key;
         renderReadout(); renderList();
       })
       .catch(function (err) {
