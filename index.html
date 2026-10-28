@@ -475,9 +475,17 @@
       .catch(function () { btn.disabled = false; btn.classList.remove("armed"); btn.textContent = "Delete"; });
   }
 
-  partInput.addEventListener("input", function () { editing = false; renderReadout(); renderList(); });
-  partInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { partInput.blur(); focusHours(); } });
-  $("clear").addEventListener("click", function () { partInput.value = ""; renderReadout(); renderList(); partInput.focus(); });
+  partInput.addEventListener("input", function () { editing = false; adding = false; renderReadout(); renderList(); });
+  partInput.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    // One match left: open it.
+    var filter = partKey(partInput.value);
+    var hits = parts.filter(function (p) { return filter && p.part.indexOf(filter) !== -1; });
+    if (hits.length === 1) { partInput.value = hits[0].part; renderReadout(); renderList(); }
+    partInput.blur();
+  });
+  $("clear").addEventListener("click", function () { partInput.value = ""; adding = false; renderReadout(); renderList(); partInput.focus(); });
+  $("add").addEventListener("click", function () { adding = true; editing = false; renderReadout(); });
   $("list").addEventListener("click", function (e) {
     var c = e.target.closest("button[data-clockin]");
     if (c) { onClockIn(c); return; }
