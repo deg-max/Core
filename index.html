@@ -221,23 +221,12 @@
 
   <section class="readout job" id="job" hidden></section>
 
-  <div class="lookup">
-    <label class="cap" for="part">Search saved parts</label>
-    <div class="search-row">
-      <div class="search-wrap">
-        <input id="part" type="text" placeholder="Search" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
-        <button class="clear" id="clear" type="button" aria-label="Clear search" hidden>×</button>
-      </div>
-      <button class="primary" id="add" type="button">+ Add part</button>
+  <div class="search-row">
+    <div class="search-wrap">
+      <input id="part" type="text" placeholder="Search parts" aria-label="Search saved parts" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
+      <button class="clear" id="clear" type="button" aria-label="Clear search" hidden>×</button>
     </div>
-  </div>
-
-  <div class="eff">
-    <label class="cap" for="eff">Target efficiency</label>
-    <div class="eff-input">
-      <input id="eff" type="text" inputmode="decimal" value="100" autocomplete="off" aria-describedby="eff-unit">
-      <span id="eff-unit">%</span>
-    </div>
+    <button class="ghost" id="add" type="button">+ Add part</button>
   </div>
 
   <section class="readout" id="readout" hidden aria-live="polite"></section>
