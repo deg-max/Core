@@ -310,12 +310,12 @@
     var e = parseHours(effInput.value);
     return e > 0 && e <= 500 ? e : NaN;
   }
+  // Just the done-by time; time allowed only adds anything when the target isn't 100%.
+  function atTarget(e) { return e === 100 ? "" : " at " + e + "%"; }
   function factsHtml(h) {
     var e = efficiency(), allowed = h / (e / 100), ok = isFinite(allowed);
-    return '<div class="fact target"><div class="k">Done by for ' + (ok ? e : "–") + '%</div><div class="v">' + (ok ? finishAt(allowed) : "Set a target") + '</div></div>' +
-      '<div class="fact"><div class="k">Time allowed</div><div class="v">' + (ok ? shortTime(allowed) : "–") + '</div></div>' +
-      '<div class="fact"><div class="k">Finish at 100%</div><div class="v">' + finishAt(h) + '</div></div>' +
-      '<div class="fact"><div class="k">In minutes</div><div class="v">' + minutesText(h) + '</div></div>';
+    return '<div class="fact target"><div class="k">Done by' + (ok ? atTarget(e) : "") + '</div><div class="v">' + (ok ? finishAt(allowed) : "Set a target below") + '</div></div>' +
+      (ok && e !== 100 ? '<div class="fact"><div class="k">Time allowed</div><div class="v">' + shortTime(allowed) + '</div></div>' : '');
   }
   function currentHours() {
     if ($("steps")) { var hs = formHours(); return hs ? total(hs) : NaN; }
