@@ -308,9 +308,9 @@
       '<div class="fact"><div class="k">In minutes</div><div class="v">' + minutesText(h) + '</div></div>';
   }
   function currentHours() {
-    if ($("hours")) { var h = parseHours($("hours").value); return h > 0 ? h : NaN; }
+    if ($("steps")) { var hs = formHours(); return hs ? total(hs) : NaN; }
     var saved = findPart(partKey(partInput.value));
-    return saved ? saved.hours : NaN;
+    return saved ? selHours(saved) : NaN;
   }
   function refreshFacts() {
     var f = $("facts"), h = currentHours();
@@ -330,6 +330,19 @@
     for (var i = 0; i < parts.length; i++) if (parts[i].part === key) return parts[i];
     return null;
   }
+  // ---------- steps ----------
+  // A part with steps stores each step's decimal time in `steps` and their total in `hours`.
+  // stepSel is the step shown on the card: an index, or -1 for all steps together.
+  var stepSel = 0;
+  function total(hs) { return Math.round(hs.reduce(function (s, h) { return s + h; }, 0) * 10000) / 10000; }
+  function selHours(p) { return p.steps && stepSel >= 0 ? p.steps[stepSel] : p.hours; }
+  function cleanSteps(v) {
+    if (!Array.isArray(v) || v.length < 2) return null;
+    v = v.map(Number);
+    return v.every(function (h) { return h > 0; }) ? v : null;
+  }
+  function stepLabel(step) { return step === null || step === undefined ? "" : " · Step " + (step + 1); }
+
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
