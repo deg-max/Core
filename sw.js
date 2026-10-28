@@ -1,5 +1,6 @@
-// Keeps Part Clock opening with no signal: serve the cached copy, refresh it in the background.
-const CACHE = "part-clock-v1";
+// Network first, so a published change shows on the next open; the cached copy is only
+// used with no signal (or when the network takes longer than 3 seconds).
+const CACHE = "part-clock-v2";
 const FILES = ["./", "index.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
