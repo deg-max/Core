@@ -433,7 +433,7 @@
 
   // ---------- actions ----------
   function onSave() {
-    var h = parseHours($("hours").value), key = partKey(partInput.value);
+    var h = parseHours($("hours").value), key = formKey();
     if (!db || saving || !key || !(h > 0)) return;
     saving = true; updatePreview();
     db.collection("parts").doc(docId(key))
