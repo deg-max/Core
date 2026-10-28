@@ -490,11 +490,12 @@
     $("list").innerHTML = shown.map(function (p) {
       var active = job && job.part === p.part, done = active ? jobDoneBy() : NaN;
       return '<li><button class="row" type="button" data-part="' + esc(p.part) + '">' +
-        '<span class="pn">' + esc(p.part) + '</span>' +
+        '<span class="pn">' + esc(p.part) + (p.steps ? ' <span class="nsteps">· ' + p.steps.length + ' steps</span>' : '') + '</span>' +
         '<span class="dec">' + esc(String(p.hours)) + '</span>' +
         '<span class="hm">' + shortTime(p.hours) + '</span></button>' +
+        // A part with steps opens its card so you can pick which step you're clocking into.
         '<button class="clockin' + (active ? ' on' : '') + '" type="button" data-clockin="' + esc(p.part) + '">' +
-        (active ? (isFinite(done) ? 'Done ' + clockTime(done) : 'Clocked in') : 'Clock in') + '</button></li>';
+        (active ? (isFinite(done) ? 'Done ' + clockTime(done) : 'Clocked in') : p.steps ? 'Pick step' : 'Clock in') + '</button></li>';
     }).join("");
     var empty = $("empty");
     if (!db) {
