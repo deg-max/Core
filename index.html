@@ -88,11 +88,20 @@
   input::placeholder { color: var(--dim); opacity: 0.6; font-weight: 500; }
 
   .search-row { display: flex; gap: 10px; align-items: stretch; }
-  .search-wrap { position: relative; flex: 1; min-width: 0; }
-  .search-wrap input { padding-right: 48px; }
+  .search-wrap { flex: 1; min-width: 0; }
+  .search-wrap input { font-size: 22px; padding-left: 12px; }
+  .kbd + .clear { margin-left: -6px; }
+  .field-wrap { position: relative; }
+  .field-wrap input { padding-right: 60px; }
+  .field-wrap:has(.clear:not([hidden])) input { padding-right: 90px; }
+  .in-btns { position: absolute; right: 6px; top: 0; bottom: 0; display: flex; align-items: center; gap: 2px; }
+  .kbd {
+    height: 40px; padding: 0 6px; border: 0; background: none; cursor: pointer; border-radius: 6px;
+    font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--dim);
+  }
+  .kbd:focus-visible { outline: 2px solid var(--signal); }
   .search-row button.ghost { height: auto; padding: 0 14px; white-space: nowrap; }
   .clear {
-    position: absolute; right: 8px; bottom: 9px;
     width: 40px; height: 40px; border: 0; background: none; color: var(--dim);
     font-size: 22px; cursor: pointer; border-radius: 6px;
   }
@@ -232,9 +241,12 @@
   <section class="readout job" id="job" hidden></section>
 
   <div class="search-row">
-    <div class="search-wrap">
-      <input id="part" type="text" placeholder="Search" aria-label="Search saved parts" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
-      <button class="clear" id="clear" type="button" aria-label="Clear search" hidden>×</button>
+    <div class="search-wrap field-wrap">
+      <input id="part" type="text" inputmode="numeric" placeholder="Search" aria-label="Search saved parts" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
+      <div class="in-btns">
+        <button class="kbd" type="button">ABC</button>
+        <button class="clear" id="clear" type="button" aria-label="Clear search" hidden>×</button>
+      </div>
     </div>
     <button class="ghost" id="add" type="button">+ Add part</button>
   </div>
@@ -313,7 +325,7 @@
   }
   function currentHours() {
     if ($("steps")) { var hs = formHours(); return hs ? total(hs) : NaN; }
-    var saved = findPart(partKey(partInput.value));
+    var saved = matchPart(partInput.value);
     return saved ? selHours(saved) : NaN;
   }
   function refreshFacts() {
@@ -329,6 +341,16 @@
   function partKey(text) { return String(text || "").trim().toUpperCase().replace(/\s+/g, " "); }
   function docId(key) {
     return key.replace(/[^A-Za-z0-9_\-~:@]/g, function (c) { return "+" + c.charCodeAt(0).toString(16).toUpperCase(); });
+  }
+  // Search ignores dashes and spaces, so a part can be found from the number pad alone.
+  function squash(text) { return partKey(text).replace(/[^A-Z0-9]/g, ""); }
+  function matches(p, text) { var q = squash(text); return !q || squash(p.part).indexOf(q) !== -1; }
+  // The part the search box names: an exact match, or the only part that matches ignoring dashes and spaces.
+  function matchPart(text) {
+    var exact = findPart(partKey(text)); if (exact) return exact;
+    var q = squash(text); if (!q) return null;
+    var hits = parts.filter(function (p) { return squash(p.part) === q; });
+    return hits.length === 1 ? hits[0] : null;
   }
   function findPart(key) {
     for (var i = 0; i < parts.length; i++) if (parts[i].part === key) return parts[i];
@@ -359,7 +381,7 @@
     $("clear").hidden = !key;
     if (adding) { renderAdd(); return; }
     // The search bar only looks up saved parts; new ones go through Add part.
-    var saved = findPart(key);
+    var saved = matchPart(key);
     if (!saved) { readout.hidden = true; editing = false; return; }
     readout.hidden = false;
 
@@ -408,14 +430,16 @@
   // Add part: its own part number field, then the decimal time.
   function renderAdd() {
     readout.hidden = false;
-    var start = findPart(partKey(partInput.value)) ? "" : partKey(partInput.value);
+    var start = matchPart(partInput.value) ? "" : partKey(partInput.value);
     readout.innerHTML =
       '<div class="readout-head"><span class="part-tag">New part</span>' +
       '<span class="status" id="addstatus"></span></div>' +
-      '<div><label class="cap" for="newpart">Part number</label>' +
-        '<input id="newpart" type="text" placeholder="e.g. 4471-220" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" value="' + esc(start) + '"></div>' +
+      '<div><label class="cap" for="newpart">Part number</label><div class="field-wrap">' +
+        '<input id="newpart" type="text" placeholder="e.g. 4471-220" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" value="' + esc(start) + '">' +
+        '<div class="in-btns"><button class="kbd" type="button">ABC</button></div></div></div>' +
       hoursFormHtml();
     var np = $("newpart");
+    applyKbd();
     np.oninput = updatePreview;
     np.onkeydown = function (e) { if (e.key === "Enter") focusHours(); };
     wireHoursForm([""], function () { adding = false; renderReadout(); });
@@ -474,7 +498,11 @@
     setSteps(vals);
   }
 
-  function formKey() { return partKey(adding ? $("newpart").value : partInput.value); }
+  function formKey() {
+    if (adding) return partKey($("newpart").value);
+    var saved = matchPart(partInput.value);
+    return saved ? saved.part : partKey(partInput.value);
+  }
 
   function updatePreview() {
     if (!$("steps")) return;
@@ -487,8 +515,7 @@
   }
 
   function renderList() {
-    var filter = partKey(partInput.value);
-    var shown = parts.filter(function (p) { return !filter || p.part.indexOf(filter) !== -1; });
+    var shown = parts.filter(function (p) { return matches(p, partInput.value); });
     $("count").textContent = parts.length ? parts.length + (parts.length === 1 ? " part" : " parts") : "";
     $("list").innerHTML = shown.map(function (p) {
       var active = job && job.part === p.part, done = active ? jobDoneBy() : NaN;
@@ -547,7 +574,7 @@
   }
 
   function onDelete() {
-    var btn = $("del"), key = partKey(partInput.value);
+    var btn = $("del"), key = formKey();
     if (!db || !btn) return;
     if (!btn.classList.contains("armed")) {
       btn.classList.add("armed"); btn.textContent = "Tap again to delete";
@@ -569,8 +596,7 @@
   partInput.addEventListener("keydown", function (e) {
     if (e.key !== "Enter") return;
     // One match left: open it.
-    var filter = partKey(partInput.value);
-    var hits = parts.filter(function (p) { return filter && p.part.indexOf(filter) !== -1; });
+    var hits = squash(partInput.value) ? parts.filter(function (p) { return matches(p, partInput.value); }) : [];
     if (hits.length === 1) { partInput.value = hits[0].part; renderReadout(); renderList(); }
     partInput.blur();
   });
@@ -588,6 +614,29 @@
     renderReadout(); renderList();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
+  // ---------- keyboard ----------
+  // Part numbers are mostly digits, so the part fields open the number pad.
+  // ABC switches to the full keyboard for dashes and letters; the choice is remembered.
+  var letters = false;
+  try { letters = localStorage.getItem("pc-kbd") === "abc"; } catch (e) {}
+  function applyKbd() {
+    [partInput, $("newpart")].forEach(function (el) { if (el) el.setAttribute("inputmode", letters ? "text" : "numeric"); });
+    [].forEach.call(document.querySelectorAll(".kbd"), function (b) {
+      b.textContent = letters ? "123" : "ABC";
+      b.setAttribute("aria-label", letters ? "Use the number pad" : "Use the full keyboard");
+    });
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest(".kbd"); if (!b) return;
+    letters = !letters;
+    try { localStorage.setItem("pc-kbd", letters ? "abc" : "123"); } catch (x) {}
+    applyKbd();
+    // The keyboard only changes when the field is focused again.
+    var input = b.closest(".field-wrap").querySelector("input");
+    input.blur(); input.focus();
+  });
+  applyKbd();
 
   // ---------- clock in ----------
   // One job at a time, kept on this phone: the part, its decimal time and when you clocked in.
