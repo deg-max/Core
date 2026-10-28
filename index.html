@@ -490,7 +490,7 @@
     var c = e.target.closest("button[data-clockin]");
     if (c) { onClockIn(c); return; }
     var b = e.target.closest("button[data-part]"); if (!b) return;
-    partInput.value = b.getAttribute("data-part"); editing = false;
+    partInput.value = b.getAttribute("data-part"); editing = false; adding = false;
     renderReadout(); renderList();
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
