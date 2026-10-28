@@ -197,6 +197,8 @@
     <div class="clock" id="clock">--:--</div>
   </header>
 
+  <section class="readout job" id="job" hidden></section>
+
   <div class="lookup">
     <label class="cap" for="part">Part number</label>
     <input id="part" type="text" placeholder="e.g. 4471-220" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
@@ -367,10 +369,13 @@
     var shown = parts.filter(function (p) { return !filter || p.part.indexOf(filter) !== -1; });
     $("count").textContent = parts.length ? parts.length + (parts.length === 1 ? " part" : " parts") : "";
     $("list").innerHTML = shown.map(function (p) {
-      return '<li><button type="button" data-part="' + esc(p.part) + '">' +
+      var active = job && job.part === p.part, done = active ? jobDoneBy() : NaN;
+      return '<li><button class="row" type="button" data-part="' + esc(p.part) + '">' +
         '<span class="pn">' + esc(p.part) + '</span>' +
         '<span class="dec">' + esc(String(p.hours)) + '</span>' +
-        '<span class="hm">' + shortTime(p.hours) + '</span></button></li>';
+        '<span class="hm">' + shortTime(p.hours) + '</span></button>' +
+        '<button class="clockin' + (active ? ' on' : '') + '" type="button" data-clockin="' + esc(p.part) + '">' +
+        (active ? (isFinite(done) ? 'Done ' + clockTime(done) : 'Clocked in') : 'Clock in') + '</button></li>';
     }).join("");
     var empty = $("empty");
     if (!db) {
@@ -437,18 +442,77 @@
   partInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { partInput.blur(); focusHours(); } });
   $("clear").addEventListener("click", function () { partInput.value = ""; renderReadout(); renderList(); partInput.focus(); });
   $("list").addEventListener("click", function (e) {
+    var c = e.target.closest("button[data-clockin]");
+    if (c) { onClockIn(c); return; }
     var b = e.target.closest("button[data-part]"); if (!b) return;
     partInput.value = b.getAttribute("data-part"); editing = false;
     renderReadout(); renderList();
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
+  // ---------- clock in ----------
+  // One job at a time, kept on this phone: the part, its decimal time and when you clocked in.
+  // "Done by" counts from the clock-in time, so it stays put while you work.
+  var job = null, switchTimer = null;
+  try { job = JSON.parse(localStorage.getItem("pc-job") || "null"); } catch (e) { job = null; }
+  function saveJob() {
+    try { if (job) localStorage.setItem("pc-job", JSON.stringify(job)); else localStorage.removeItem("pc-job"); } catch (e) {}
+  }
+  function clockTime(ms) {
+    var t = new Date(ms), now = new Date();
+    var s = t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return t.toDateString() === now.toDateString() ? s : s + " " + t.toLocaleDateString([], { weekday: "short" });
+  }
+  function jobDoneBy() {
+    var e = efficiency();
+    return job && isFinite(e) ? job.start + Math.round(job.hours / (e / 100) * 3600) * 1000 : NaN;
+  }
+  function minutesLeftText(ms) {
+    var mins = Math.ceil(Math.abs(ms) / 60000), h = Math.floor(mins / 60);
+    return (h ? h + "h " : "") + (mins % 60) + "m";
+  }
+  function renderJob() {
+    var el = $("job");
+    if (!job) { el.hidden = true; el.innerHTML = ""; return; }
+    var e = efficiency(), done = jobDoneBy(), left = done - Date.now();
+    el.hidden = false;
+    el.innerHTML =
+      '<div class="readout-head"><span class="part-tag">' + esc(job.part) + '</span>' +
+      '<span class="status">Clocked in ' + clockTime(job.start) + '</span></div>' +
+      '<div class="job-k">Done by for ' + (isFinite(e) ? e : "–") + '%</div>' +
+      '<div class="big">' + (isFinite(done) ? esc(clockTime(done)) : '<small>Set a target</small>') + '</div>' +
+      '<div class="facts">' +
+        '<div class="fact"><div class="k">' + (left >= 0 || !isFinite(left) ? "Time left" : "Over by") + '</div>' +
+          '<div class="v' + (left < 0 ? ' over' : '') + '">' + (isFinite(left) ? minutesLeftText(left) : "–") + '</div></div>' +
+        '<div class="fact"><div class="k">Finish at 100%</div><div class="v">' + clockTime(job.start + Math.round(job.hours * 3600) * 1000) + '</div></div>' +
+      '</div>' +
+      '<div class="actions"><button class="ghost" type="button" id="clockout">Clock out</button></div>';
+    $("clockout").onclick = function () { job = null; saveJob(); renderJob(); renderList(); };
+  }
+  function onClockIn(btn) {
+    var p = findPart(btn.getAttribute("data-clockin"));
+    if (!p) return;
+    if (job && job.part !== p.part && !btn.classList.contains("armed")) {
+      // Already clocked into another part: ask for a second tap so a stray tap can't lose that time.
+      btn.classList.add("armed"); btn.textContent = "Tap to switch";
+      clearTimeout(switchTimer);
+      switchTimer = setTimeout(renderList, 3000);
+      return;
+    }
+    clearTimeout(switchTimer);
+    if (!job || job.part !== p.part) { job = { part: p.part, hours: p.hours, start: Date.now() }; saveJob(); }
+    renderJob(); renderList();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  effInput.addEventListener("input", function () { renderJob(); renderList(); });
+
   // ---------- clock ----------
   function tick() {
     $("clock").textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     refreshFacts();
+    renderJob();
   }
-  tick(); setInterval(tick, 15000);
+  tick(); setInterval(tick, 5000);
 
   // ---------- storage ----------
   // Parts are kept in this browser's storage. A Home Screen app on iPhone has its own storage,
