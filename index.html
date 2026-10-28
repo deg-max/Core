@@ -152,6 +152,25 @@
   button.ghost.armed { background: var(--danger); border-color: var(--danger); color: var(--panel); }
   button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
   .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  button.primary.wide { width: 100%; }
+  button.primary.armed { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+
+  /* Steps: a part can take more than one operation, each with its own clock time. */
+  .steps { display: flex; gap: 6px; flex-wrap: wrap; }
+  .steps button {
+    flex: 1 1 0; min-width: 5.5em; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: none; color: var(--ink); border: 2px solid var(--line); border-radius: 6px; padding: 6px 8px; cursor: pointer;
+    font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .steps button span { font-family: var(--mono); font-weight: 500; font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--dim); }
+  .steps button.on { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+  .steps button.on span { color: var(--panel); opacity: 0.75; }
+  .step-fields { display: flex; flex-direction: column; gap: 12px; }
+  .step-row { display: flex; gap: 8px; align-items: stretch; }
+  .step-row .hours-wrap { flex: 1; min-width: 0; }
+  button.ghost.rm { height: auto; width: 52px; padding: 0; font-size: 22px; }
+  .step-fields #addstep { align-self: flex-start; }
+  ul.parts .nsteps { font-weight: 500; color: var(--dim); white-space: nowrap; }
 
   .note { font-size: 14px; color: var(--dim); margin: 0; }
   .note.err { color: var(--danger); }
