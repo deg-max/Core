@@ -1,0 +1,13 @@
+{
+  "name": "Part Clock",
+  "short_name": "Part Clock",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e7eaec",
+  "theme_color": "#e7eaec",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

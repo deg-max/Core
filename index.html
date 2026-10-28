@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Part Clock</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Part Clock">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#e7eaec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101315" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  /* Layout: one narrow column like a time-clock terminal; the converted time is the big readout. */
+  :root {
+    --bg: #e7eaec;
+    --panel: #f8f9fa;
+    --ink: #15191c;
+    --dim: #5b646b;
+    --line: #cfd5d9;
+    --field: #ffffff;
+    --signal: #f2b705;      /* safety yellow, used as a fill */
+    --on-signal: #1a1a14;
+    --danger: #b3261e;
+    --ok: #2f6b3d;
+    --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "Barlow", system-ui, -apple-system, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101315; --panel: #191d20; --ink: #e6e9eb; --dim: #8e989f; --line: #2c3337;
+      --field: #0d1012; --signal: #f5c518; --on-signal: #17150a; --danger: #ef6b5f; --ok: #6cc183;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101315; --panel: #191d20; --ink: #e6e9eb; --dim: #8e989f; --line: #2c3337;
+    --field: #0d1012; --signal: #f5c518; --on-signal: #17150a; --danger: #ef6b5f; --ok: #6cc183;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  :root {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-text-size-adjust: 100%;
+  }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.45;
+    padding-block: 20px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .app { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 {
+    font-family: var(--display); font-weight: 700; font-size: 30px; letter-spacing: 0.02em;
+    text-transform: uppercase; margin: 0; line-height: 1;
+  }
+  .clock { font-family: var(--mono); font-size: 14px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+  label.cap {
+    display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 6px;
+  }
+  input[type=text] {
+    width: 100%; min-width: 0;
+    font-family: var(--mono); font-weight: 700; font-size: 26px; letter-spacing: 0.02em;
+    color: var(--ink); background: var(--field);
+    border: 2px solid var(--line); border-radius: 8px;
+    padding: 12px 14px;
+  }
+  input[type=text]:focus-visible { outline: none; border-color: var(--signal); }
+  input::placeholder { color: var(--dim); opacity: 0.6; font-weight: 500; }
+
+  .lookup { position: relative; }
+  .clear {
+    position: absolute; right: 8px; bottom: 9px;
+    width: 40px; height: 40px; border: 0; background: none; color: var(--dim);
+    font-size: 22px; cursor: pointer; border-radius: 6px;
+  }
+  .clear:focus-visible { outline: 2px solid var(--signal); }
+
+  /* The readout: the one bordered, filled object on the page. */
+  .readout {
+    background: var(--panel); border: 2px solid var(--ink); border-radius: 10px;
+    padding: 18px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .readout-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .part-tag {
+    font-family: var(--mono); font-weight: 700; font-size: 15px;
+    background: var(--signal); color: var(--on-signal); padding: 3px 9px; border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  .status { font-size: 13px; color: var(--dim); text-align: right; }
+  .big {
+    font-family: var(--mono); font-weight: 700; font-size: clamp(44px, 15vw, 64px);
+    line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+  }
+  .big small { font-size: 0.45em; color: var(--dim); font-weight: 500; margin: 0 0.15em 0 0.05em; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .fact .k { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+  .fact .v { font-family: var(--mono); font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fact.target { background: var(--signal); color: var(--on-signal); border-radius: 6px; padding: 8px 10px; }
+  .fact.target .k { color: var(--on-signal); opacity: 0.75; }
+
+  .eff {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 10px 2px;
+  }
+  .eff label.cap { margin: 0; }
+  .eff-input { display: flex; align-items: baseline; gap: 4px; }
+  .eff-input input[type=text] {
+    width: 5.6ch; padding: 6px 8px; font-size: 24px; text-align: right;
+  }
+  .eff-input span { font-family: var(--mono); font-weight: 700; font-size: 20px; }
+
+  .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .row > .grow { flex: 1 1 160px; min-width: 0; }
+  .hours-wrap { position: relative; }
+  .hours-wrap input { padding-right: 58px; }
+  .hours-wrap .unit {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    font-family: var(--mono); color: var(--dim); font-size: 15px; pointer-events: none;
+  }
+
+  button.primary, button.ghost {
+    font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: 0.06em; text-transform: uppercase;
+    border-radius: 8px; padding: 0 18px; height: 56px; cursor: pointer;
+  }
+  button.primary { background: var(--signal); color: var(--on-signal); border: 2px solid var(--signal); }
+  button.primary:disabled { opacity: 0.4; cursor: default; }
+  button.ghost { background: none; color: var(--ink); border: 2px solid var(--line); height: 44px; font-size: 16px; }
+  button.ghost.danger { color: var(--danger); }
+  button.ghost.armed { background: var(--danger); border-color: var(--danger); color: var(--panel); }
+  button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .note { font-size: 14px; color: var(--dim); margin: 0; }
+  .note.err { color: var(--danger); }
+  .note.ok { color: var(--ok); }
+
+  .list-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .list-head h2 {
+    font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: 0.08em;
+    text-transform: uppercase; margin: 0;
+  }
+  .count { font-size: 13px; color: var(--dim); font-family: var(--mono); }
+  ul.parts { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  ul.parts li { border-bottom: 1px solid var(--line); }
+  ul.parts button {
+    width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: baseline;
+    background: none; border: 0; color: var(--ink); text-align: left; padding: 13px 4px; cursor: pointer;
+    font-family: var(--mono); font-size: 16px;
+  }
+  ul.parts button:hover { background: var(--panel); }
+  ul.parts .pn { font-weight: 700; overflow-wrap: anywhere; }
+  ul.parts .dec { color: var(--dim); font-variant-numeric: tabular-nums; }
+  ul.parts .hm { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 6.5ch; text-align: right; }
+  .empty { padding: 16px 4px; color: var(--dim); font-size: 15px; border-top: 1px solid var(--line); }
+  .empty b { font-family: var(--mono); color: var(--ink); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .readout { animation: rise 160ms ease-out; }
+    @keyframes rise { from { transform: translateY(4px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>Part Clock</h1>
+    <div class="clock" id="clock">--:--</div>
+  </header>
+
+  <div class="lookup">
+    <label class="cap" for="part">Part number</label>
+    <input id="part" type="text" placeholder="e.g. 4471-220" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
+    <button class="clear" id="clear" type="button" aria-label="Clear part number" hidden>×</button>
+  </div>
+
+  <div class="eff">
+    <label class="cap" for="eff">Target efficiency</label>
+    <div class="eff-input">
+      <input id="eff" type="text" inputmode="decimal" value="100" autocomplete="off" aria-describedby="eff-unit">
+      <span id="eff-unit">%</span>
+    </div>
+  </div>
+
+  <section class="readout" id="readout" hidden aria-live="polite"></section>
+
+  <section>
+    <div class="list-head">
+      <h2>Saved parts</h2>
+      <span class="count" id="count"></span>
+    </div>
+    <ul class="parts" id="list"></ul>
+    <div class="empty" id="empty">Loading your parts…</div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var db = null, parts = [], editing = false, saving = false, armTimer = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var partInput = $("part"), readout = $("readout");
+
+  // ---------- time math ----------
+  function parseHours(text) {
+    var t = String(text || "").trim().replace(",", ".");
+    if (!/^\d*\.?\d+$|^\d+\.$/.test(t)) return NaN;
+    return parseFloat(t);
+  }
+  function splitHours(h) {
+    var total = Math.round(h * 3600);
+    return { h: Math.floor(total / 3600), m: Math.floor((total % 3600) / 60), s: total % 60, mins: h * 60 };
+  }
+  function bigTime(h) {
+    var p = splitHours(h), out = "";
+    if (p.h) out += p.h + "<small>h</small> ";
+    if (p.h || p.m || !p.s) out += p.m + "<small>m</small>";
+    if (p.s) out += " " + p.s + "<small>s</small>";
+    return out;
+  }
+  function shortTime(h) {
+    var p = splitHours(h);
+    var s = (p.h ? p.h + "h " : "") + p.m + "m";
+    return p.s ? s + " " + p.s + "s" : s;
+  }
+  function minutesText(h) {
+    var m = h * 60;
+    return (Math.round(m * 100) / 100).toString() + " min";
+  }
+  function finishAt(h) {
+    var now = new Date(), end = new Date(now.getTime() + Math.round(h * 3600) * 1000);
+    var t = end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return end.toDateString() === now.toDateString() ? t : t + " " + end.toLocaleDateString([], { weekday: "short" });
+  }
+
+  // ---------- efficiency ----------
+  // Efficiency = clock time ÷ time actually taken, so the time allowed is clock time ÷ efficiency.
+  var effInput = $("eff");
+  try { var savedEff = localStorage.getItem("pc-eff"); if (savedEff) effInput.value = savedEff; } catch (e) {}
+  function efficiency() {
+    var e = parseHours(effInput.value);
+    return e > 0 && e <= 500 ? e : NaN;
+  }
+  function factsHtml(h) {
+    var e = efficiency(), allowed = h / (e / 100), ok = isFinite(allowed);
+    return '<div class="fact target"><div class="k">Done by for ' + (ok ? e : "–") + '%</div><div class="v">' + (ok ? finishAt(allowed) : "Set a target") + '</div></div>' +
+      '<div class="fact"><div class="k">Time allowed</div><div class="v">' + (ok ? shortTime(allowed) : "–") + '</div></div>' +
+      '<div class="fact"><div class="k">Finish at 100%</div><div class="v">' + finishAt(h) + '</div></div>' +
+      '<div class="fact"><div class="k">In minutes</div><div class="v">' + minutesText(h) + '</div></div>';
+  }
+  function currentHours() {
+    if ($("hours")) { var h = parseHours($("hours").value); return h > 0 ? h : NaN; }
+    var saved = findPart(partKey(partInput.value));
+    return saved ? saved.hours : NaN;
+  }
+  function refreshFacts() {
+    var f = $("facts"), h = currentHours();
+    if (f && h > 0) f.innerHTML = factsHtml(h);
+  }
+  effInput.addEventListener("input", function () {
+    try { localStorage.setItem("pc-eff", effInput.value); } catch (e) {}
+    refreshFacts();
+  });
+
+  // ---------- part keys ----------
+  function partKey(text) { return String(text || "").trim().toUpperCase().replace(/\s+/g, " "); }
+  function docId(key) {
+    return key.replace(/[^A-Za-z0-9_\-~:@]/g, function (c) { return "+" + c.charCodeAt(0).toString(16).toUpperCase(); });
+  }
+  function findPart(key) {
+    for (var i = 0; i < parts.length; i++) if (parts[i].part === key) return parts[i];
+    return null;
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // ---------- rendering ----------
+  function renderReadout() {
+    var key = partKey(partInput.value);
+    $("clear").hidden = !key;
+    if (!key) { readout.hidden = true; editing = false; return; }
+    readout.hidden = false;
+
+    var saved = findPart(key);
+    if (saved && !editing) {
+      readout.innerHTML =
+        '<div class="readout-head"><span class="part-tag">' + esc(saved.part) + '</span>' +
+        '<span class="status">Saved · ' + esc(String(saved.hours)) + ' hr</span></div>' +
+        '<div class="big" aria-label="Actual time ' + esc(shortTime(saved.hours)) + '">' + bigTime(saved.hours) + '</div>' +
+        '<div class="facts" id="facts">' + factsHtml(saved.hours) + '</div>' +
+        '<div class="actions">' +
+          '<button class="ghost" type="button" id="edit">Change time</button>' +
+          '<button class="ghost danger" type="button" id="del">Delete</button>' +
+        '</div>';
+      $("edit").onclick = function () { editing = true; renderReadout(); focusHours(); };
+      $("del").onclick = onDelete;
+      return;
+    }
+
+    // New part, or changing a saved one: enter decimal hours, see the conversion live.
+    var start = saved ? String(saved.hours) : "";
+    readout.innerHTML =
+      '<div class="readout-head"><span class="part-tag">' + esc(key) + '</span>' +
+      '<span class="status">' + (saved ? "Changing time" : "Not saved yet") + '</span></div>' +
+      '<div class="row">' +
+        '<div class="grow"><label class="cap" for="hours">Decimal time from the clock</label>' +
+          '<div class="hours-wrap"><input id="hours" type="text" inputmode="decimal" placeholder="1.75" autocomplete="off" value="' + esc(start) + '"><span class="unit">hr</span></div></div>' +
+        '<button class="primary" type="button" id="save" disabled>Save</button>' +
+      '</div>' +
+      '<div class="big" id="preview"></div>' +
+      '<div class="facts" id="facts" hidden></div>' +
+      (saved ? '<div class="actions"><button class="ghost" type="button" id="cancel">Cancel</button></div>' : '') +
+      '<p class="note" id="msg">' + "" + '</p>';
+
+    var hours = $("hours");
+    hours.oninput = updatePreview;
+    hours.onkeydown = function (e) { if (e.key === "Enter") onSave(); };
+    $("save").onclick = onSave;
+    if (saved) $("cancel").onclick = function () { editing = false; renderReadout(); };
+    updatePreview();
+  }
+
+  function updatePreview() {
+    var hours = $("hours"); if (!hours) return;
+    var h = parseHours(hours.value), ok = isFinite(h) && h > 0;
+    $("preview").innerHTML = ok ? bigTime(h) : '<small>Type the decimal, like 1.75</small>';
+    $("facts").hidden = !ok;
+    if (ok) $("facts").innerHTML = factsHtml(h);
+    $("save").disabled = !ok || !db || saving;
+  }
+
+  function renderList() {
+    var filter = partKey(partInput.value);
+    var shown = parts.filter(function (p) { return !filter || p.part.indexOf(filter) !== -1; });
+    $("count").textContent = parts.length ? parts.length + (parts.length === 1 ? " part" : " parts") : "";
+    $("list").innerHTML = shown.map(function (p) {
+      return '<li><button type="button" data-part="' + esc(p.part) + '">' +
+        '<span class="pn">' + esc(p.part) + '</span>' +
+        '<span class="dec">' + esc(String(p.hours)) + '</span>' +
+        '<span class="hm">' + shortTime(p.hours) + '</span></button></li>';
+    }).join("");
+    var empty = $("empty");
+    if (!db) {
+      empty.hidden = false;
+      empty.textContent = "This browser can't save parts.";
+    } else if (!parts.length) {
+      empty.hidden = false;
+      empty.innerHTML = 'No parts yet. Type a part number above, enter its decimal time and tap Save. ' +
+        'Example: <b>1.75</b> hr becomes <b>1h 45m</b>.';
+    } else if (!shown.length) {
+      empty.hidden = false;
+      empty.textContent = "No saved part matches. Enter its time above to save it.";
+    } else {
+      empty.hidden = true;
+    }
+  }
+
+  function focusHours() { var h = $("hours"); if (h) { h.focus(); h.select(); } }
+
+  // ---------- actions ----------
+  function onSave() {
+    var h = parseHours($("hours").value), key = partKey(partInput.value);
+    if (!db || saving || !key || !(h > 0)) return;
+    saving = true; updatePreview();
+    db.collection("parts").doc(docId(key))
+      .set({ part: key, hours: h, updatedAt: new Date().toISOString() })
+      .then(function () {
+        saving = false; editing = false;
+        // The snapshot listener refreshes the list; show the saved readout right away.
+        if (!findPart(key)) parts.push({ part: key, hours: h });
+        else findPart(key).hours = h;
+        renderReadout(); renderList();
+      })
+      .catch(function (err) {
+        saving = false; updatePreview();
+        var msg = $("msg");
+        if (msg) {
+          msg.className = "note err";
+          msg.textContent = "Couldn't save on this phone. Saving doesn't work in Private Browsing.";
+        }
+      });
+  }
+
+  function onDelete() {
+    var btn = $("del"), key = partKey(partInput.value);
+    if (!db || !btn) return;
+    if (!btn.classList.contains("armed")) {
+      btn.classList.add("armed"); btn.textContent = "Tap again to delete";
+      clearTimeout(armTimer);
+      armTimer = setTimeout(function () { if ($("del")) { $("del").classList.remove("armed"); $("del").textContent = "Delete"; } }, 3000);
+      return;
+    }
+    clearTimeout(armTimer);
+    btn.disabled = true; btn.textContent = "Deleting…";
+    db.collection("parts").doc(docId(key)).delete()
+      .then(function () {
+        parts = parts.filter(function (p) { return p.part !== key; });
+        partInput.value = ""; renderReadout(); renderList();
+      })
+      .catch(function () { btn.disabled = false; btn.classList.remove("armed"); btn.textContent = "Delete"; });
+  }
+
+  partInput.addEventListener("input", function () { editing = false; renderReadout(); renderList(); });
+  partInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { partInput.blur(); focusHours(); } });
+  $("clear").addEventListener("click", function () { partInput.value = ""; renderReadout(); renderList(); partInput.focus(); });
+  $("list").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-part]"); if (!b) return;
+    partInput.value = b.getAttribute("data-part"); editing = false;
+    renderReadout(); renderList();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  // ---------- clock ----------
+  function tick() {
+    $("clock").textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    refreshFacts();
+  }
+  tick(); setInterval(tick, 15000);
+
+  // ---------- storage ----------
+  // Parts are kept in this browser's storage. A Home Screen app on iPhone has its own storage,
+  // separate from Safari's. This mimics the few database calls the page makes.
+  function localDb() {
+    var KEY = "pc-parts", listeners = [];
+    function load() { try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { return {}; } }
+    function emit() {
+      var all = load();
+      var docs = Object.keys(all)
+        .sort(function (a, b) { return String(all[a].part).localeCompare(String(all[b].part), undefined, { numeric: true }); })
+        .map(function (id) { return { id: id, data: function () { return all[id]; } }; });
+      listeners.forEach(function (fn) { fn({ docs: docs }); });
+    }
+    function write(change) {
+      return new Promise(function (resolve, reject) {
+        try { var all = load(); change(all); localStorage.setItem(KEY, JSON.stringify(all)); resolve(); emit(); }
+        catch (e) { reject({ code: "unavailable" }); }
+      });
+    }
+    var parts = {
+      doc: function (id) {
+        return {
+          set: function (data) { return write(function (all) { all[id] = data; }); },
+          delete: function () { return write(function (all) { delete all[id]; }); }
+        };
+      },
+      orderBy: function () { return parts; },
+      limit: function () { return parts; },
+      onSnapshot: function (fn) { listeners.push(fn); emit(); }
+    };
+    window.addEventListener("storage", function (e) { if (e.key === KEY) emit(); });
+    return { collection: function () { return parts; } };
+  }
+
+  // ---------- data ----------
+  renderList();
+  (async function () {
+    db = localDb();
+    if (!db) { renderList(); renderReadout(); return; }
+    db.collection("parts").orderBy("part").limit(500).onSnapshot(function (snap) {
+      parts = snap.docs.map(function (d) { var x = d.data(); return { part: String(x.part), hours: Number(x.hours) }; })
+        .filter(function (p) { return p.part && p.hours > 0; });
+      renderList();
+      // Never redraw over a decimal being typed.
+      if (!$("hours")) renderReadout();
+    }, function () {
+      $("empty").hidden = false;
+      $("empty").textContent = "Couldn't load your saved parts. Reload the page to try again.";
+    });
+    renderReadout();
+  })();
+})();
+</script>
+<script>
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
+</script>
+</body>
+</html>
