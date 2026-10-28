@@ -237,7 +237,7 @@
 (function () {
   "use strict";
 
-  var db = null, parts = [], editing = false, saving = false, armTimer = null;
+  var db = null, parts = [], editing = false, adding = false, saving = false, armTimer = null;
   var $ = function (id) { return document.getElementById(id); };
   var partInput = $("part"), readout = $("readout");
 
