@@ -152,7 +152,7 @@
   button.ghost.danger { color: var(--danger); }
   button.ghost.armed { background: var(--danger); border-color: var(--danger); color: var(--panel); }
   button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
-  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .actions { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
   button.primary.wide { width: 100%; }
   button.primary.armed { background: var(--ink); border-color: var(--ink); color: var(--panel); }
 
@@ -210,9 +210,7 @@
   ul.parts button.clockin.on { background: var(--signal); border-color: var(--signal); color: var(--on-signal); }
   ul.parts button.clockin.armed { background: var(--ink); border-color: var(--ink); color: var(--panel); }
   .job-k { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); margin-bottom: -8px; }
-  .fact .v.over { color: var(--danger); }
   ul.parts .pn { font-weight: 700; overflow-wrap: anywhere; }
-  ul.parts .dec { color: var(--dim); font-variant-numeric: tabular-nums; }
   ul.parts .hm { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 6.5ch; text-align: right; }
   .empty { padding: 16px 4px; color: var(--dim); font-size: 15px; border-top: 1px solid var(--line); }
   .empty b { font-family: var(--mono); color: var(--ink); }
@@ -235,7 +233,7 @@
 
   <div class="search-row">
     <div class="search-wrap">
-      <input id="part" type="text" placeholder="Search parts" aria-label="Search saved parts" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
+      <input id="part" type="text" placeholder="Search" aria-label="Search saved parts" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
       <button class="clear" id="clear" type="button" aria-label="Clear search" hidden>×</button>
     </div>
     <button class="ghost" id="add" type="button">+ Add part</button>
@@ -291,10 +289,6 @@
     var p = splitHours(h);
     var s = (p.h ? p.h + "h " : "") + p.m + "m";
     return p.s ? s + " " + p.s + "s" : s;
-  }
-  function minutesText(h) {
-    var m = h * 60;
-    return (Math.round(m * 100) / 100).toString() + " min";
   }
   function finishAt(h) {
     var now = new Date(), end = new Date(now.getTime() + Math.round(h * 3600) * 1000);
@@ -376,7 +370,7 @@
       var here = job && job.part === saved.part && job.step === step;
       readout.innerHTML =
         '<div class="readout-head"><span class="part-tag">' + esc(saved.part) + '</span>' +
-        '<span class="status">' + esc(String(h)) + ' hr</span></div>' +
+        (multi ? '</div>' : '<span class="status">' + esc(String(h)) + ' hr</span></div>') +
         (multi ? '<div class="steps" id="picker" role="group" aria-label="Step">' +
           saved.steps.map(function (s, i) {
             return '<button type="button" data-step="' + i + '" aria-pressed="' + (stepSel === i) + '"' + (stepSel === i ? ' class="on"' : '') + '>Step ' + (i + 1) + '<span>' + esc(String(s)) + ' hr</span></button>';
@@ -434,7 +428,7 @@
       '<p class="note" id="split" hidden></p>' +
       '<div class="actions">' +
         '<button class="primary" type="button" id="save" disabled>Save</button>' +
-        '<button class="ghost" type="button" id="cancel">Cancel</button>' +
+        '<button class="link" type="button" id="cancel">Cancel</button>' +
       '</div>' +
       '<p class="note" id="msg"></p>';
   }
