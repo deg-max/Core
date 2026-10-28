@@ -376,7 +376,7 @@
       var here = job && job.part === saved.part && job.step === step;
       readout.innerHTML =
         '<div class="readout-head"><span class="part-tag">' + esc(saved.part) + '</span>' +
-        '<span class="status">' + (multi ? saved.steps.length + ' steps · ' : 'Saved · ') + esc(String(saved.hours)) + ' hr</span></div>' +
+        '<span class="status">' + esc(String(h)) + ' hr</span></div>' +
         (multi ? '<div class="steps" id="picker" role="group" aria-label="Step">' +
           saved.steps.map(function (s, i) {
             return '<button type="button" data-step="' + i + '" aria-pressed="' + (stepSel === i) + '"' + (stepSel === i ? ' class="on"' : '') + '>Step ' + (i + 1) + '<span>' + esc(String(s)) + ' hr</span></button>';
@@ -387,9 +387,9 @@
         '<div class="facts" id="facts">' + factsHtml(h) + '</div>' +
         '<button class="primary wide" type="button" id="clockhere">' +
           (here ? 'Clocked in' + stepLabel(step) : 'Clock in' + stepLabel(step)) + '</button>' +
-        '<div class="actions">' +
-          '<button class="ghost" type="button" id="edit">' + (multi ? 'Change times' : 'Change time') + '</button>' +
-          '<button class="ghost danger" type="button" id="del">Delete</button>' +
+        '<div class="quiet">' +
+          '<button class="link" type="button" id="edit">' + (multi ? 'Edit times' : 'Edit time') + '</button>' +
+          '<button class="link danger" type="button" id="del">Delete</button>' +
         '</div>';
       if (multi) $("picker").onclick = function (e) {
         var b = e.target.closest("button[data-step]"); if (!b) return;
@@ -432,7 +432,6 @@
     return '<div class="step-fields" id="steps"></div>' +
       '<div class="big" id="preview"></div>' +
       '<p class="note" id="split" hidden></p>' +
-      '<div class="facts" id="facts" hidden></div>' +
       '<div class="actions">' +
         '<button class="primary" type="button" id="save" disabled>Save</button>' +
         '<button class="ghost" type="button" id="cancel">Cancel</button>' +
@@ -448,7 +447,7 @@
         '<div class="step-row"><div class="hours-wrap"><input id="hours' + i + '" class="hours" type="text" inputmode="decimal" placeholder="1.75" autocomplete="off" enterkeyhint="' + (i < vals.length - 1 ? 'next' : 'done') + '" value="' + esc(v) + '"><span class="unit">hr</span></div>' +
         (multi ? '<button class="ghost rm" type="button" data-rm="' + i + '" aria-label="Remove step ' + (i + 1) + '">×</button>' : '') + '</div></div>';
     }).join("") +
-      '<button class="ghost" type="button" id="addstep">+ Add step ' + (vals.length > 1 ? vals.length + 1 : 2) + '</button>';
+      '<button class="link" type="button" id="addstep">+ Add step ' + (vals.length > 1 ? vals.length + 1 : 2) + '</button>';
     updatePreview();
   }
   function formVals() { return [].map.call(readout.querySelectorAll("input.hours"), function (el) { return el.value; }); }
@@ -489,8 +488,6 @@
     $("preview").innerHTML = ok ? bigTime(h) : '<small>Type the decimal, like 1.75</small>';
     $("split").hidden = !(ok && hs.length > 1);
     if (ok && hs.length > 1) $("split").textContent = hs.map(function (s, i) { return "Step " + (i + 1) + " " + shortTime(s); }).join(" + ") + " (total)";
-    $("facts").hidden = !ok;
-    if (ok) $("facts").innerHTML = factsHtml(h);
     if (adding) $("addstatus").textContent = findPart(formKey()) ? "Already saved · will update" : "";
     $("save").disabled = !ok || !formKey() || !db || saving;
   }
@@ -502,12 +499,11 @@
     $("list").innerHTML = shown.map(function (p) {
       var active = job && job.part === p.part, done = active ? jobDoneBy() : NaN;
       return '<li><button class="row" type="button" data-part="' + esc(p.part) + '">' +
-        '<span class="pn">' + esc(p.part) + (p.steps ? ' <span class="nsteps">· ' + p.steps.length + ' steps</span>' : '') + '</span>' +
-        '<span class="dec">' + esc(String(p.hours)) + '</span>' +
+        '<span class="pn">' + esc(p.part) + (p.steps ? '<span class="nsteps">' + p.steps.length + ' steps</span>' : '') + '</span>' +
         '<span class="hm">' + shortTime(p.hours) + '</span></button>' +
         // A part with steps opens its card so you can pick which step you're clocking into.
         '<button class="clockin' + (active ? ' on' : '') + '" type="button" data-clockin="' + esc(p.part) + '">' +
-        (active ? (isFinite(done) ? 'Done ' + clockTime(done) : 'Clocked in') : p.steps ? 'Pick step' : 'Clock in') + '</button></li>';
+        (active ? (isFinite(done) ? 'Done ' + clockTime(done) : 'Clocked in') : 'Clock in') + '</button></li>';
     }).join("");
     var empty = $("empty");
     if (!db) {
@@ -629,15 +625,14 @@
     el.hidden = false;
     el.innerHTML =
       '<div class="readout-head"><span class="part-tag">' + esc(job.part + stepLabel(job.step)) + '</span>' +
-      '<span class="status">Clocked in ' + clockTime(job.start) + '</span></div>' +
-      '<div class="job-k">Done by for ' + (isFinite(e) ? e : "–") + '%</div>' +
-      '<div class="big">' + (isFinite(done) ? esc(clockTime(done)) : '<small>Set a target</small>') + '</div>' +
-      '<div class="facts">' +
-        '<div class="fact"><div class="k">' + (left >= 0 || !isFinite(left) ? "Time left" : "Over by") + '</div>' +
-          '<div class="v' + (left < 0 ? ' over' : '') + '">' + (isFinite(left) ? minutesLeftText(left) : "–") + '</div></div>' +
-        '<div class="fact"><div class="k">Finish at 100%</div><div class="v">' + clockTime(job.start + Math.round(job.hours * 3600) * 1000) + '</div></div>' +
-      '</div>' +
-      '<div class="actions"><button class="ghost" type="button" id="clockout">Clock out</button></div>';
+      '<span class="status">In at ' + clockTime(job.start) + '</span></div>' +
+      '<div class="job-k">Done by' + (isFinite(e) ? atTarget(e) : "") + '</div>' +
+      '<div class="big">' + (isFinite(done) ? esc(clockTime(done)) : '<small>Set a target below</small>') + '</div>' +
+      '<div class="job-foot">' +
+        '<span class="left' + (left < 0 ? ' over' : '') + '">' +
+          (isFinite(left) ? (left >= 0 ? minutesLeftText(left) + ' left' : minutesLeftText(left) + ' over') : '') + '</span>' +
+        '<button class="ghost" type="button" id="clockout">Clock out</button>' +
+      '</div>';
     $("clockout").onclick = function () { job = null; saveJob(); renderJob(); renderList(); if (!$("steps")) renderReadout(); };
   }
   function onClockIn(btn) {
