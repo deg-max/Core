@@ -77,14 +77,14 @@
     display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--dim); margin-bottom: 6px;
   }
-  input[type=text] {
+  input[type=text], input[type=tel] {
     width: 100%; min-width: 0;
     font-family: var(--mono); font-weight: 700; font-size: 26px; letter-spacing: 0.02em;
     color: var(--ink); background: var(--field);
     border: 2px solid var(--line); border-radius: 8px;
     padding: 12px 14px;
   }
-  input[type=text]:focus-visible { outline: none; border-color: var(--signal); }
+  input[type=text]:focus-visible, input[type=tel]:focus-visible { outline: none; border-color: var(--signal); }
   input::placeholder { color: var(--dim); opacity: 0.6; font-weight: 500; }
 
   .search-row { display: flex; gap: 10px; align-items: stretch; }
@@ -242,7 +242,7 @@
 
   <div class="search-row">
     <div class="search-wrap field-wrap">
-      <input id="part" type="text" inputmode="numeric" placeholder="Search" aria-label="Search saved parts" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
+      <input id="part" type="tel" inputmode="numeric" placeholder="Search" aria-label="Search saved parts" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search">
       <div class="in-btns">
         <button class="kbd" type="button">ABC</button>
         <button class="clear" id="clear" type="button" aria-label="Clear search" hidden>×</button>
@@ -435,7 +435,7 @@
       '<div class="readout-head"><span class="part-tag">New part</span>' +
       '<span class="status" id="addstatus"></span></div>' +
       '<div><label class="cap" for="newpart">Part number</label><div class="field-wrap">' +
-        '<input id="newpart" type="text" placeholder="e.g. 4471-220" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" value="' + esc(start) + '">' +
+        '<input id="newpart" type="tel" inputmode="numeric" placeholder="e.g. 4471-220" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" value="' + esc(start) + '">' +
         '<div class="in-btns"><button class="kbd" type="button">ABC</button></div></div></div>' +
       hoursFormHtml();
     var np = $("newpart");
@@ -616,12 +616,16 @@
   }
 
   // ---------- keyboard ----------
-  // Part numbers are mostly digits, so the part fields open the number pad.
-  // ABC switches to the full keyboard for dashes and letters; the choice is remembered.
+  // Part numbers are mostly digits, so the part fields open the number pad. A phone-number
+  // field (type tel) gets the number pad on every phone keyboard; inputmode alone doesn't.
+  // ABC switches to the full keyboard for dashes and letters, until the page is next opened.
   var letters = false;
-  try { letters = localStorage.getItem("pc-kbd") === "abc"; } catch (e) {}
   function applyKbd() {
-    [partInput, $("newpart")].forEach(function (el) { if (el) el.setAttribute("inputmode", letters ? "text" : "numeric"); });
+    [partInput, $("newpart")].forEach(function (el) {
+      if (!el) return;
+      el.type = letters ? "text" : "tel";
+      el.setAttribute("inputmode", letters ? "text" : "numeric");
+    });
     [].forEach.call(document.querySelectorAll(".kbd"), function (b) {
       b.textContent = letters ? "123" : "ABC";
       b.setAttribute("aria-label", letters ? "Use the number pad" : "Use the full keyboard");
@@ -630,7 +634,6 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".kbd"); if (!b) return;
     letters = !letters;
-    try { localStorage.setItem("pc-kbd", letters ? "abc" : "123"); } catch (x) {}
     applyKbd();
     // The keyboard only changes when the field is focused again.
     var input = b.closest(".field-wrap").querySelector("input");

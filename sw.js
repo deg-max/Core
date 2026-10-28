@@ -1,6 +1,6 @@
 // Network first, so a published change shows on the next open; the cached copy is only
 // used with no signal (or when the network takes longer than 3 seconds).
-const CACHE = "part-clock-v2";
+const CACHE = "part-clock-v3";
 const FILES = ["./", "index.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
