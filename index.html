@@ -385,7 +385,9 @@
         var b = e.target.closest("button[data-step]"); if (!b) return;
         stepSel = Number(b.getAttribute("data-step")); renderReadout();
       };
-      $("clockhere").onclick = function () { clockIn($("clockhere"), saved, step, renderReadout); };
+      $("clockhere").onclick = function () {
+        clockIn($("clockhere"), saved, step, function () { if (!$("steps")) renderReadout(); });
+      };
       $("edit").onclick = function () { editing = true; renderReadout(); focusHours(); };
       $("del").onclick = onDelete;
       return;
