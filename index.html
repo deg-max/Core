@@ -360,15 +360,32 @@
     readout.hidden = false;
 
     if (!editing) {
+      var multi = !!saved.steps;
+      if (!multi || stepSel >= saved.steps.length) stepSel = multi ? 0 : -1;
+      var h = selHours(saved), step = multi && stepSel >= 0 ? stepSel : null;
+      var here = job && job.part === saved.part && job.step === step;
       readout.innerHTML =
         '<div class="readout-head"><span class="part-tag">' + esc(saved.part) + '</span>' +
-        '<span class="status">Saved · ' + esc(String(saved.hours)) + ' hr</span></div>' +
-        '<div class="big" aria-label="Actual time ' + esc(shortTime(saved.hours)) + '">' + bigTime(saved.hours) + '</div>' +
-        '<div class="facts" id="facts">' + factsHtml(saved.hours) + '</div>' +
+        '<span class="status">' + (multi ? saved.steps.length + ' steps · ' : 'Saved · ') + esc(String(saved.hours)) + ' hr</span></div>' +
+        (multi ? '<div class="steps" id="picker" role="group" aria-label="Step">' +
+          saved.steps.map(function (s, i) {
+            return '<button type="button" data-step="' + i + '" aria-pressed="' + (stepSel === i) + '"' + (stepSel === i ? ' class="on"' : '') + '>Step ' + (i + 1) + '<span>' + esc(String(s)) + ' hr</span></button>';
+          }).join("") +
+          '<button type="button" data-step="-1" aria-pressed="' + (stepSel < 0) + '"' + (stepSel < 0 ? ' class="on"' : '') + '>All<span>' + esc(String(saved.hours)) + ' hr</span></button>' +
+        '</div>' : '') +
+        '<div class="big" aria-label="Actual time ' + esc(shortTime(h)) + '">' + bigTime(h) + '</div>' +
+        '<div class="facts" id="facts">' + factsHtml(h) + '</div>' +
+        '<button class="primary wide" type="button" id="clockhere">' +
+          (here ? 'Clocked in' + stepLabel(step) : 'Clock in' + stepLabel(step)) + '</button>' +
         '<div class="actions">' +
-          '<button class="ghost" type="button" id="edit">Change time</button>' +
+          '<button class="ghost" type="button" id="edit">' + (multi ? 'Change times' : 'Change time') + '</button>' +
           '<button class="ghost danger" type="button" id="del">Delete</button>' +
         '</div>';
+      if (multi) $("picker").onclick = function (e) {
+        var b = e.target.closest("button[data-step]"); if (!b) return;
+        stepSel = Number(b.getAttribute("data-step")); renderReadout();
+      };
+      $("clockhere").onclick = function () { clockIn($("clockhere"), saved, step, renderReadout); };
       $("edit").onclick = function () { editing = true; renderReadout(); focusHours(); };
       $("del").onclick = onDelete;
       return;
@@ -378,8 +395,8 @@
     readout.innerHTML =
       '<div class="readout-head"><span class="part-tag">' + esc(key) + '</span>' +
       '<span class="status">Changing time</span></div>' +
-      hoursFormHtml(String(saved.hours));
-    wireHoursForm(function () { editing = false; renderReadout(); });
+      hoursFormHtml();
+    wireHoursForm((saved.steps || [saved.hours]).map(String), function () { editing = false; renderReadout(); });
   }
 
   // Add part: its own part number field, then the decimal time.
@@ -391,41 +408,75 @@
       '<span class="status" id="addstatus"></span></div>' +
       '<div><label class="cap" for="newpart">Part number</label>' +
         '<input id="newpart" type="text" placeholder="e.g. 4471-220" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" value="' + esc(start) + '"></div>' +
-      hoursFormHtml("");
+      hoursFormHtml();
     var np = $("newpart");
     np.oninput = updatePreview;
     np.onkeydown = function (e) { if (e.key === "Enter") focusHours(); };
-    wireHoursForm(function () { adding = false; renderReadout(); });
+    wireHoursForm([""], function () { adding = false; renderReadout(); });
     if (start) focusHours(); else np.focus();
   }
 
-  function hoursFormHtml(start) {
-    return '<div class="row">' +
-        '<div class="grow"><label class="cap" for="hours">Decimal time from the clock</label>' +
-          '<div class="hours-wrap"><input id="hours" type="text" inputmode="decimal" placeholder="1.75" autocomplete="off" value="' + esc(start) + '"><span class="unit">hr</span></div></div>' +
-        '<button class="primary" type="button" id="save" disabled>Save</button>' +
-      '</div>' +
+  function hoursFormHtml() {
+    return '<div class="step-fields" id="steps"></div>' +
       '<div class="big" id="preview"></div>' +
+      '<p class="note" id="split" hidden></p>' +
       '<div class="facts" id="facts" hidden></div>' +
-      '<div class="actions"><button class="ghost" type="button" id="cancel">Cancel</button></div>' +
+      '<div class="actions">' +
+        '<button class="primary" type="button" id="save" disabled>Save</button>' +
+        '<button class="ghost" type="button" id="cancel">Cancel</button>' +
+      '</div>' +
       '<p class="note" id="msg"></p>';
   }
 
-  function wireHoursForm(onCancel) {
-    var hours = $("hours");
-    hours.oninput = updatePreview;
-    hours.onkeydown = function (e) { if (e.key === "Enter") onSave(); };
+  // One time field per step; a part without steps just has the one.
+  function setSteps(vals) {
+    var multi = vals.length > 1;
+    $("steps").innerHTML = vals.map(function (v, i) {
+      return '<div><label class="cap" for="hours' + i + '">' + (multi ? 'Step ' + (i + 1) + ' · decimal time' : 'Decimal time from the clock') + '</label>' +
+        '<div class="step-row"><div class="hours-wrap"><input id="hours' + i + '" class="hours" type="text" inputmode="decimal" placeholder="1.75" autocomplete="off" enterkeyhint="' + (i < vals.length - 1 ? 'next' : 'done') + '" value="' + esc(v) + '"><span class="unit">hr</span></div>' +
+        (multi ? '<button class="ghost rm" type="button" data-rm="' + i + '" aria-label="Remove step ' + (i + 1) + '">×</button>' : '') + '</div></div>';
+    }).join("") +
+      '<button class="ghost" type="button" id="addstep">+ Add step ' + (vals.length > 1 ? vals.length + 1 : 2) + '</button>';
+    updatePreview();
+  }
+  function formVals() { return [].map.call(readout.querySelectorAll("input.hours"), function (el) { return el.value; }); }
+  function formHours() {
+    var hs = formVals().map(parseHours);
+    return hs.length && hs.every(function (h) { return h > 0; }) ? hs : null;
+  }
+
+  function wireHoursForm(vals, onCancel) {
+    var box = $("steps");
+    box.oninput = updatePreview;
+    box.onkeydown = function (e) {
+      if (e.key !== "Enter" || !e.target.classList.contains("hours")) return;
+      var ins = readout.querySelectorAll("input.hours"), i = [].indexOf.call(ins, e.target);
+      if (i < ins.length - 1) { ins[i + 1].focus(); ins[i + 1].select(); } else onSave();
+    };
+    box.onclick = function (e) {
+      var v = formVals();
+      if (e.target.id === "addstep") {
+        // A part's first "add step" turns its one time into Step 1 and adds Step 2.
+        v.push(""); setSteps(v);
+        var ins = readout.querySelectorAll("input.hours"); ins[ins.length - 1].focus();
+        return;
+      }
+      var rm = e.target.closest("button[data-rm]");
+      if (rm) { v.splice(Number(rm.getAttribute("data-rm")), 1); setSteps(v); }
+    };
     $("save").onclick = onSave;
     $("cancel").onclick = onCancel;
-    updatePreview();
+    setSteps(vals);
   }
 
   function formKey() { return partKey(adding ? $("newpart").value : partInput.value); }
 
   function updatePreview() {
-    var hours = $("hours"); if (!hours) return;
-    var h = parseHours(hours.value), ok = isFinite(h) && h > 0;
+    if (!$("steps")) return;
+    var hs = formHours(), ok = !!hs, h = ok ? total(hs) : NaN;
     $("preview").innerHTML = ok ? bigTime(h) : '<small>Type the decimal, like 1.75</small>';
+    $("split").hidden = !(ok && hs.length > 1);
+    if (ok && hs.length > 1) $("split").textContent = hs.map(function (s, i) { return "Step " + (i + 1) + " " + shortTime(s); }).join(" + ") + " (total)";
     $("facts").hidden = !ok;
     if (ok) $("facts").innerHTML = factsHtml(h);
     if (adding) $("addstatus").textContent = findPart(formKey()) ? "Already saved · will update" : "";
