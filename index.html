@@ -161,13 +161,22 @@
   }
   .count { font-size: 13px; color: var(--dim); font-family: var(--mono); }
   ul.parts { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-  ul.parts li { border-bottom: 1px solid var(--line); }
-  ul.parts button {
-    width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: baseline;
+  ul.parts li { border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+  ul.parts button.row {
+    flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: baseline;
     background: none; border: 0; color: var(--ink); text-align: left; padding: 13px 4px; cursor: pointer;
     font-family: var(--mono); font-size: 16px;
   }
-  ul.parts button:hover { background: var(--panel); }
+  ul.parts button.row:hover { background: var(--panel); }
+  ul.parts button.clockin {
+    flex: 0 0 auto; min-width: 7.5em; height: 38px; padding: 0 10px; border-radius: 6px; cursor: pointer;
+    font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 0.05em; text-transform: uppercase;
+    background: none; color: var(--ink); border: 2px solid var(--line);
+  }
+  ul.parts button.clockin.on { background: var(--signal); border-color: var(--signal); color: var(--on-signal); }
+  ul.parts button.clockin.armed { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+  .job-k { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); margin-bottom: -8px; }
+  .fact .v.over { color: var(--danger); }
   ul.parts .pn { font-weight: 700; overflow-wrap: anywhere; }
   ul.parts .dec { color: var(--dim); font-variant-numeric: tabular-nums; }
   ul.parts .hm { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 6.5ch; text-align: right; }
