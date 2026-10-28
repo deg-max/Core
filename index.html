@@ -342,28 +342,53 @@
       return;
     }
 
-    // New part, or changing a saved one: enter decimal hours, see the conversion live.
-    var start = saved ? String(saved.hours) : "";
+    // Changing a saved one: enter decimal hours, see the conversion live.
     readout.innerHTML =
       '<div class="readout-head"><span class="part-tag">' + esc(key) + '</span>' +
-      '<span class="status">' + (saved ? "Changing time" : "Not saved yet") + '</span></div>' +
-      '<div class="row">' +
+      '<span class="status">Changing time</span></div>' +
+      hoursFormHtml(String(saved.hours));
+    wireHoursForm(function () { editing = false; renderReadout(); });
+  }
+
+  // Add part: its own part number field, then the decimal time.
+  function renderAdd() {
+    readout.hidden = false;
+    var start = findPart(partKey(partInput.value)) ? "" : partKey(partInput.value);
+    readout.innerHTML =
+      '<div class="readout-head"><span class="part-tag">New part</span>' +
+      '<span class="status" id="addstatus"></span></div>' +
+      '<div><label class="cap" for="newpart">Part number</label>' +
+        '<input id="newpart" type="text" placeholder="e.g. 4471-220" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" value="' + esc(start) + '"></div>' +
+      hoursFormHtml("");
+    var np = $("newpart");
+    np.oninput = updatePreview;
+    np.onkeydown = function (e) { if (e.key === "Enter") focusHours(); };
+    wireHoursForm(function () { adding = false; renderReadout(); });
+    if (start) focusHours(); else np.focus();
+  }
+
+  function hoursFormHtml(start) {
+    return '<div class="row">' +
         '<div class="grow"><label class="cap" for="hours">Decimal time from the clock</label>' +
           '<div class="hours-wrap"><input id="hours" type="text" inputmode="decimal" placeholder="1.75" autocomplete="off" value="' + esc(start) + '"><span class="unit">hr</span></div></div>' +
         '<button class="primary" type="button" id="save" disabled>Save</button>' +
       '</div>' +
       '<div class="big" id="preview"></div>' +
       '<div class="facts" id="facts" hidden></div>' +
-      (saved ? '<div class="actions"><button class="ghost" type="button" id="cancel">Cancel</button></div>' : '') +
-      '<p class="note" id="msg">' + "" + '</p>';
+      '<div class="actions"><button class="ghost" type="button" id="cancel">Cancel</button></div>' +
+      '<p class="note" id="msg"></p>';
+  }
 
+  function wireHoursForm(onCancel) {
     var hours = $("hours");
     hours.oninput = updatePreview;
     hours.onkeydown = function (e) { if (e.key === "Enter") onSave(); };
     $("save").onclick = onSave;
-    if (saved) $("cancel").onclick = function () { editing = false; renderReadout(); };
+    $("cancel").onclick = onCancel;
     updatePreview();
   }
+
+  function formKey() { return partKey(adding ? $("newpart").value : partInput.value); }
 
   function updatePreview() {
     var hours = $("hours"); if (!hours) return;
@@ -371,7 +396,8 @@
     $("preview").innerHTML = ok ? bigTime(h) : '<small>Type the decimal, like 1.75</small>';
     $("facts").hidden = !ok;
     if (ok) $("facts").innerHTML = factsHtml(h);
-    $("save").disabled = !ok || !db || saving;
+    if (adding) $("addstatus").textContent = findPart(formKey()) ? "Already saved · will update" : "";
+    $("save").disabled = !ok || !formKey() || !db || saving;
   }
 
   function renderList() {
