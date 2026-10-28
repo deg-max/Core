@@ -87,7 +87,10 @@
   input[type=text]:focus-visible { outline: none; border-color: var(--signal); }
   input::placeholder { color: var(--dim); opacity: 0.6; font-weight: 500; }
 
-  .lookup { position: relative; }
+  .search-row { display: flex; gap: 10px; align-items: stretch; }
+  .search-wrap { position: relative; flex: 1; min-width: 0; }
+  .search-wrap input { padding-right: 48px; }
+  .search-row button.primary { height: auto; padding: 0 14px; white-space: nowrap; }
   .clear {
     position: absolute; right: 8px; bottom: 9px;
     width: 40px; height: 40px; border: 0; background: none; color: var(--dim);
