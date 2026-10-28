@@ -419,11 +419,11 @@
       empty.textContent = "This browser can't save parts.";
     } else if (!parts.length) {
       empty.hidden = false;
-      empty.innerHTML = 'No parts yet. Type a part number above, enter its decimal time and tap Save. ' +
+      empty.innerHTML = 'No parts yet. Tap <b>+ Add part</b>, enter the part number and its decimal time, then Save. ' +
         'Example: <b>1.75</b> hr becomes <b>1h 45m</b>.';
     } else if (!shown.length) {
       empty.hidden = false;
-      empty.textContent = "No saved part matches. Enter its time above to save it.";
+      empty.textContent = "No saved part matches. Tap + Add part to save it.";
     } else {
       empty.hidden = true;
     }
