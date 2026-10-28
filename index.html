@@ -513,20 +513,24 @@
     }
   }
 
-  function focusHours() { var h = $("hours"); if (h) { h.focus(); h.select(); } }
+  function focusHours() {
+    var ins = readout.querySelectorAll("input.hours"); if (!ins.length) return;
+    var first = [].filter.call(ins, function (el) { return !el.value; })[0] || ins[0];
+    first.focus(); first.select();
+  }
 
   // ---------- actions ----------
   function onSave() {
-    var h = parseHours($("hours").value), key = formKey();
-    if (!db || saving || !key || !(h > 0)) return;
+    var hs = formHours(), key = formKey();
+    if (!db || saving || !key || !hs) return;
+    var rec = { part: key, hours: total(hs), steps: hs.length > 1 ? hs : null };
     saving = true; updatePreview();
     db.collection("parts").doc(docId(key))
-      .set({ part: key, hours: h, updatedAt: new Date().toISOString() })
+      .set({ part: key, hours: rec.hours, steps: rec.steps, updatedAt: new Date().toISOString() })
       .then(function () {
-        saving = false; editing = false; adding = false;
+        saving = false; editing = false; adding = false; stepSel = 0;
         // The snapshot listener refreshes the list; show the saved readout right away.
-        if (!findPart(key)) parts.push({ part: key, hours: h });
-        else findPart(key).hours = h;
+        parts = parts.filter(function (p) { return p.part !== key; }).concat([rec]);
         partInput.value = key;
         renderReadout(); renderList();
       })
@@ -559,7 +563,7 @@
       .catch(function () { btn.disabled = false; btn.classList.remove("armed"); btn.textContent = "Delete"; });
   }
 
-  partInput.addEventListener("input", function () { editing = false; adding = false; renderReadout(); renderList(); });
+  partInput.addEventListener("input", function () { editing = false; adding = false; stepSel = 0; renderReadout(); renderList(); });
   partInput.addEventListener("keydown", function (e) {
     if (e.key !== "Enter") return;
     // One match left: open it.
@@ -573,17 +577,23 @@
   $("list").addEventListener("click", function (e) {
     var c = e.target.closest("button[data-clockin]");
     if (c) { onClockIn(c); return; }
-    var b = e.target.closest("button[data-part]"); if (!b) return;
-    partInput.value = b.getAttribute("data-part"); editing = false; adding = false;
+    var b = e.target.closest("button[data-part]"); if (b) openPart(b.getAttribute("data-part"));
+  });
+  function openPart(name) {
+    partInput.value = name; editing = false; adding = false; stepSel = 0;
+    // Land on the step you're clocked into, if it's this part.
+    if (job && job.part === name && job.step !== null) stepSel = job.step;
     renderReadout(); renderList();
     window.scrollTo({ top: 0, behavior: "smooth" });
-  });
+  }
 
   // ---------- clock in ----------
   // One job at a time, kept on this phone: the part, its decimal time and when you clocked in.
   // "Done by" counts from the clock-in time, so it stays put while you work.
   var job = null, switchTimer = null;
   try { job = JSON.parse(localStorage.getItem("pc-job") || "null"); } catch (e) { job = null; }
+  // step: which step of the part (0, 1, …), or null for the whole part.
+  if (job && typeof job.step !== "number") job.step = null;
   function saveJob() {
     try { if (job) localStorage.setItem("pc-job", JSON.stringify(job)); else localStorage.removeItem("pc-job"); } catch (e) {}
   }
@@ -606,7 +616,7 @@
     var e = efficiency(), done = jobDoneBy(), left = done - Date.now();
     el.hidden = false;
     el.innerHTML =
-      '<div class="readout-head"><span class="part-tag">' + esc(job.part) + '</span>' +
+      '<div class="readout-head"><span class="part-tag">' + esc(job.part + stepLabel(job.step)) + '</span>' +
       '<span class="status">Clocked in ' + clockTime(job.start) + '</span></div>' +
       '<div class="job-k">Done by for ' + (isFinite(e) ? e : "–") + '%</div>' +
       '<div class="big">' + (isFinite(done) ? esc(clockTime(done)) : '<small>Set a target</small>') + '</div>' +
@@ -616,21 +626,28 @@
         '<div class="fact"><div class="k">Finish at 100%</div><div class="v">' + clockTime(job.start + Math.round(job.hours * 3600) * 1000) + '</div></div>' +
       '</div>' +
       '<div class="actions"><button class="ghost" type="button" id="clockout">Clock out</button></div>';
-    $("clockout").onclick = function () { job = null; saveJob(); renderJob(); renderList(); };
+    $("clockout").onclick = function () { job = null; saveJob(); renderJob(); renderList(); if (!$("steps")) renderReadout(); };
   }
   function onClockIn(btn) {
     var p = findPart(btn.getAttribute("data-clockin"));
     if (!p) return;
-    if (job && job.part !== p.part && !btn.classList.contains("armed")) {
-      // Already clocked into another part: ask for a second tap so a stray tap can't lose that time.
+    if (p.steps && !(job && job.part === p.part)) { openPart(p.part); return; }
+    clockIn(btn, p, job && job.part === p.part ? job.step : null, renderList);
+  }
+  // step: an index into p.steps, or null for the whole part.
+  function clockIn(btn, p, step, reset) {
+    var same = job && job.part === p.part && job.step === step;
+    if (job && !same && !btn.classList.contains("armed")) {
+      // Already clocked into another job: ask for a second tap so a stray tap can't lose that time.
       btn.classList.add("armed"); btn.textContent = "Tap to switch";
       clearTimeout(switchTimer);
-      switchTimer = setTimeout(renderList, 3000);
+      switchTimer = setTimeout(reset, 3000);
       return;
     }
     clearTimeout(switchTimer);
-    if (!job || job.part !== p.part) { job = { part: p.part, hours: p.hours, start: Date.now() }; saveJob(); }
+    if (!same) { job = { part: p.part, step: step, hours: step === null ? p.hours : p.steps[step], start: Date.now() }; saveJob(); }
     renderJob(); renderList();
+    if (!$("steps")) renderReadout();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   effInput.addEventListener("input", function () { renderJob(); renderList(); });
@@ -683,11 +700,13 @@
     db = localDb();
     if (!db) { renderList(); renderReadout(); return; }
     db.collection("parts").orderBy("part").limit(500).onSnapshot(function (snap) {
-      parts = snap.docs.map(function (d) { var x = d.data(); return { part: String(x.part), hours: Number(x.hours) }; })
-        .filter(function (p) { return p.part && p.hours > 0; });
+      parts = snap.docs.map(function (d) {
+        var x = d.data(), steps = cleanSteps(x.steps);
+        return { part: String(x.part), hours: steps ? total(steps) : Number(x.hours), steps: steps };
+      }).filter(function (p) { return p.part && p.hours > 0; });
       renderList();
       // Never redraw over a decimal being typed.
-      if (!$("hours")) renderReadout();
+      if (!$("steps")) renderReadout();
     }, function () {
       $("empty").hidden = false;
       $("empty").textContent = "Couldn't load your saved parts. Reload the page to try again.";
