@@ -240,6 +240,12 @@
   }
 
   // ---------- actions ----------
+  // Ids are timestamps, bumped past any already used so two quick adds can't share one.
+  function nextId() {
+    var id = Date.now();
+    Object.keys(all).forEach(function (k) { all[k].forEach(function (t) { if (t.id >= id) id = t.id + 1; }); });
+    return id;
+  }
   function find(id) {
     var list = all[dayKey(day)] || [];
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
