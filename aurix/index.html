@@ -395,13 +395,24 @@
       '<h3>By email: from any device, no pop-up</h3>' +
       '<form class="key" data-al-form="key"><input type="text" data-keep="mailkey" placeholder="Web3Forms access key" aria-label="Web3Forms access key" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(key) + '"><button type="submit">Save</button></form>' +
       (mailStatus ? '<p class="a-status' + (mailErr ? ' err' : '') + '">' + esc(mailStatus) + '</p>' : '') +
+      '<p>Get a key:</p>' +
       '<ol>' +
-        '<li>Go to <b>web3forms.com</b>, enter your <b>iCloud</b> email, and paste the access key they email you above. Do this on each device you use Aurix on.</li>' +
-        '<li>On your iPhone, open <b>Shortcuts → Automation → + → Email</b>. Set <b>Subject Contains</b> to <b>Aurix timer</b>, choose <b>Run Immediately</b>, then <b>Next → New Blank Automation</b>.</li>' +
-        '<li>Add <b>Get Numbers from Input</b>. Tap its input, choose <b>Shortcut Input</b>, then tap that and pick <b>Subject</b>.</li>' +
-        '<li>Add <b>Start Timer</b>. Set its number to <b>Numbers</b> and the unit to <b>seconds</b>. Tap <b>Done</b>.</li>' +
-        '<li>Tap <b>Test</b> below. If the email lands in Junk, mark it <b>Not Junk</b>.</li>' +
+        '<li>Go to <b>web3forms.com</b>, enter your <b>iCloud</b> email, and tap <b>Create Access Key</b>.</li>' +
+        '<li>Copy the key from their email, paste it above and tap <b>Save</b>. Do this on each device you use Aurix on.</li>' +
       '</ol>' +
+      '<p>Make the automation on your iPhone (iOS 17 or later):</p>' +
+      '<ol>' +
+        '<li>Open <b>Shortcuts</b> and tap <b>Automation</b> at the bottom.</li>' +
+        '<li>Tap <b>+</b> (or <b>New Automation</b>), scroll down and choose <b>Email</b>.</li>' +
+        '<li>Tap <b>Subject Contains</b>, type <b>Aurix timer</b> and tap <b>Done</b>. Leave Sender and Account as they are.</li>' +
+        '<li>Choose <b>Run Immediately</b> and turn off <b>Notify When Run</b>. Tap <b>Next</b>, then <b>New Blank Automation</b>.</li>' +
+        '<li>Tap <b>Add Action</b>, search for <b>Get Numbers from Input</b> and add it.</li>' +
+        '<li>Tap its blue <b>Input</b>, choose <b>Shortcut Input</b>. Then tap <b>Shortcut Input</b> again and pick <b>Subject</b> if it\'s listed (if not, leave it).</li>' +
+        '<li>Add <b>Get Item from List</b>. It should read <b>Get First Item from Numbers</b>.</li>' +
+        '<li>Add <b>Start Timer</b>. Tap its number and choose <b>Item from List</b>. Tap the unit and choose <b>seconds</b>.</li>' +
+        '<li>Tap <b>Done</b> (top right).</li>' +
+      '</ol>' +
+      '<p>Then tap <b>Test: 10 seconds</b> below and lock your phone: a 10-second timer should start within a few seconds. If the email lands in Junk, mark it <b>Not Junk</b> and test again.</p>' +
       (key ? '' :
       '<details><summary>Or, on this iPhone only: run a Shortcut</summary>' +
         '<p>Each timer briefly opens Shortcuts; swipe back to Aurix.</p>' +
