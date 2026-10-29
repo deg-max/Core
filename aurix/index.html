@@ -79,23 +79,6 @@
   .switch[aria-checked="true"] { background: var(--glow); border-color: transparent; }
   .switch[aria-checked="true"]::after { left: 25px; background: #fff; }
   .a-btns { display: flex; gap: 8px; }
-  .a-btns button.go { background: var(--glow); border: 0; color: #fff; }
-  .alarm a { color: #c7bdff; }
-  .alarm .err { color: var(--danger); }
-  form.token { display: flex; gap: 8px; margin: 0; }
-  form.token input {
-    flex: 1; min-width: 0; font-family: var(--font); font-size: 15px; color: var(--ink);
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px;
-  }
-  form.token input:focus { outline: none; border-color: var(--violet); }
-  form.token button {
-    border: 0; border-radius: 12px; padding: 0 16px; font-weight: 600; font-size: 15px; cursor: pointer;
-    background: var(--glow); color: #fff;
-  }
-  textarea.script {
-    width: 100%; height: 120px; font: 12px ui-monospace, Menlo, monospace; color: var(--ink);
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px;
-  }
   .a-btns button {
     flex: 1; min-height: 44px; border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px;
     font-size: 15px; font-weight: 600; cursor: pointer;
@@ -227,8 +210,8 @@
   <header>
     <img src="logo.png" alt="">
     <h1>Aurix</h1>
-    <button class="bell" id="bell" type="button" aria-label="Settings" aria-expanded="false">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+    <button class="bell" id="bell" type="button" aria-label="Timer alarm settings" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
     </button>
   </header>
   <main id="root"></main>
@@ -238,124 +221,6 @@
   <span id="toast-text"></span>
   <button type="button" id="undo">Undo</button>
 </div>
-
-<!-- The Scriptable widget script that "Copy widget script" hands out; __GIST__ becomes your gist id. -->
-<script type="text/plain" id="widget-src">
-// Aurix widget for Scriptable: your top priorities and any running timer.
-// It reads the private copy of your list that Aurix keeps in a secret GitHub gist.
-const GIST = "__GIST__";
-const INK = new Color("#eeeaff"), DIM = new Color("#8f8ab5"), VIOLET = new Color("#b49bff");
-
-async function load() {
-  const fm = FileManager.local();
-  const cache = fm.joinPath(fm.documentsDirectory(), "aurix-widget.json");
-  try {
-    const req = new Request("https://api.github.com/gists/" + GIST);
-    req.headers = { Accept: "application/vnd.github+json" };
-    const gist = await req.loadJSON();
-    const text = gist.files["aurix.json"].content;
-    fm.writeString(cache, text);
-    return JSON.parse(text);
-  } catch (e) {
-    // Offline or GitHub busy: show the last copy we had.
-    return fm.fileExists(cache) ? JSON.parse(fm.readString(cache)) : null;
-  }
-}
-
-function addLine(stack, str, font, color) {
-  const t = stack.addText(str);
-  t.font = font;
-  t.textColor = color;
-  t.lineLimit = 1;
-  return t;
-}
-
-const data = await load();
-const family = config.widgetFamily || "medium";
-const ps = data ? data.priorities : [];
-const top = ps[0];
-const t0 = data && data.timer;
-const timer = t0 && (t0.end ? t0.end > Date.now() : t0.left > 0) ? t0 : null;
-const w = new ListWidget();
-w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
-
-if (family === "accessoryInline") {
-  addLine(w, top ? (top.tasks[0] ? top.name + ": " + top.tasks[0] : top.name) : "Aurix", Font.systemFont(12), INK);
-} else if (family === "accessoryCircular") {
-  w.addSpacer();
-  addLine(w, String(top ? top.tasks.length : 0), Font.boldSystemFont(22), INK).centerAlignText();
-  addLine(w, "to do", Font.systemFont(10), INK).centerAlignText();
-  w.addSpacer();
-} else if (family === "accessoryRectangular") {
-  if (timer && timer.end) {
-    const d = w.addDate(new Date(timer.end));
-    d.applyTimerStyle();
-    d.font = Font.semiboldMonospacedSystemFont(14);
-    addLine(w, timer.task, Font.systemFont(12), INK);
-  } else {
-    addLine(w, top ? top.name : "Aurix", Font.boldSystemFont(14), INK);
-    (top ? top.tasks : ["Nothing on your list"]).slice(0, 2).forEach(t => addLine(w, "○ " + t, Font.systemFont(12), INK));
-  }
-} else {
-  // Home Screen: black with the Aurix violet glow.
-  const bg = new LinearGradient();
-  bg.colors = [new Color("#000000"), new Color("#160b33")];
-  bg.locations = [0, 1];
-  bg.startPoint = new Point(0, 0);
-  bg.endPoint = new Point(1, 1);
-  w.backgroundGradient = bg;
-  w.setPadding(14, 16, 14, 16);
-
-  const head = w.addStack();
-  head.centerAlignContent();
-  addLine(head, "AURIX", Font.boldSystemFont(11), VIOLET);
-  head.addSpacer();
-  if (timer && timer.end) {
-    const d = head.addDate(new Date(timer.end));
-    d.applyTimerStyle();
-    d.font = Font.semiboldMonospacedSystemFont(13);
-    d.textColor = INK;
-    d.rightAlignText();
-  } else if (timer) {
-    addLine(head, "Paused", Font.semiboldSystemFont(12), DIM);
-  }
-  w.addSpacer(8);
-
-  let lines = family === "large" || family === "extraLarge" ? 13 : 5;
-  if (timer) {
-    addLine(w, "▶ " + timer.task, Font.semiboldSystemFont(13), VIOLET);
-    w.addSpacer(4);
-    lines--;
-  }
-  if (!data) {
-    addLine(w, "Open Aurix and connect the widget.", Font.systemFont(13), DIM);
-  } else if (!ps.length) {
-    addLine(w, "Nothing on your list.", Font.systemFont(13), DIM);
-  } else {
-    for (let i = 0; i < ps.length && lines > 0; i++) {
-      const p = ps[i];
-      if (i > 0) w.addSpacer(6);
-      const row = w.addStack();
-      row.centerAlignContent();
-      addLine(row, (i + 1) + "  " + p.name, Font.semiboldSystemFont(i === 0 ? 15 : 13), i === 0 ? INK : DIM);
-      row.addSpacer();
-      if (i > 0) addLine(row, String(p.tasks.length), Font.systemFont(12), DIM);
-      lines--;
-      // The top priority shows its tasks; on a large widget, every priority does.
-      if (i === 0 || lines > 4) {
-        const show = p.tasks.slice(0, Math.min(lines, i === 0 ? 3 : 2));
-        show.forEach(t => { addLine(w, "○  " + t, Font.systemFont(13), INK); lines--; });
-        if (!p.tasks.length && i === 0) { addLine(w, "All clear ✓", Font.systemFont(13), DIM); lines--; }
-      }
-    }
-  }
-  w.addSpacer();
-}
-
-Script.setWidget(w);
-if (!config.runsInWidget) await w.presentMedium();
-Script.complete();
-</script>
 
 <script>
 (function () {
@@ -371,7 +236,9 @@ Script.complete();
   var KEY = "aurix", data = { priorities: [] };
   try { data = JSON.parse(localStorage.getItem(KEY) || "null") || data; } catch (e) {}
   if (!Array.isArray(data.priorities)) data = { priorities: [] };
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} scheduleSync(); }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} }
+  // The widget experiment kept a GitHub token here; it's gone now, so don't leave it on the phone.
+  try { localStorage.removeItem("aurix-sync"); } catch (e) {}
   window.addEventListener("storage", function (e) {
     if (e.key !== KEY) return;
     try { data = JSON.parse(e.newValue || "null") || { priorities: [] }; } catch (x) {}
@@ -495,7 +362,7 @@ Script.complete();
         '<li>Tap <b>Done</b>, then test it here.</li>' +
       '</ol>' +
       '<p>Pausing or stopping in Aurix can\'t stop the Clock timer. Cancel it in the Clock app if you need to.</p>' +
-      '<div class="a-btns"><button type="button" data-al="test">Test: 5 seconds</button></div>' +
+      '<div class="a-btns"><button type="button" data-al="test">Test: 5 seconds</button><button type="button" data-al="close">Close</button></div>' +
     '</section>';
   }
   $("bell").addEventListener("click", function () { alarmOpen = !alarmOpen; render(); if (alarmOpen) window.scrollTo({ top: 0, behavior: "smooth" }); });
@@ -503,97 +370,11 @@ Script.complete();
     var b = e.target.closest("button[data-al]"); if (!b) return;
     var al = b.getAttribute("data-al");
     if (al === "toggle") { data.alarm = !data.alarm; save(); render(); }
-    else if (al === "close") { alarmOpen = false; showScript = false; render(); }
-    else if (al === "copy") {
-      var script = $("widget-src").textContent.trim().replace("__GIST__", sync.gist) + "\n";
-      var shown = function () { showScript = true; render(); var t = root.querySelector("textarea.script"); if (t) { t.focus(); t.select(); } };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(script).then(function () { copied = true; render(); setTimeout(function () { copied = false; render(); }, 2500); }, shown);
-      } else shown();
-    }
-    else if (al === "disconnect") { sync = {}; saveSync(); render(); }
+    else if (al === "close") { alarmOpen = false; render(); }
     else if (al === "test") {
       location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=5";
     }
   });
-
-  // ---------- Home Screen widget ----------
-  // iPhone widgets need a native app, so the widget runs in the free Scriptable app. With a
-  // GitHub token (only the "gist" permission), Aurix keeps a copy of the list in a secret gist
-  // and updates it after each change; the widget reads it from there. The token stays on this phone.
-  var SYNC_KEY = "aurix-sync", sync = {}, syncTimer = null, syncing = false, syncAgain = false, copied = false, showScript = false;
-  try { sync = JSON.parse(localStorage.getItem(SYNC_KEY) || "{}") || {}; } catch (e) {}
-  function saveSync() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(sync)); } catch (e) {} }
-  function widgetData() {
-    var tt = timerTask(), tm = data.timer;
-    return JSON.stringify({
-      updated: new Date().toISOString(),
-      priorities: data.priorities.map(function (p) { return { name: p.name, tasks: p.tasks.map(function (t) { return t.text; }) }; }),
-      timer: tt && !tm.up ? { task: tt.t.text, end: tm.end || null, left: tm.end ? null : tm.left } : null
-    });
-  }
-  function gistApi(method, path, body) {
-    return fetch("https://api.github.com/gists" + path, {
-      method: method, body: JSON.stringify(body),
-      headers: { Authorization: "Bearer " + sync.token, Accept: "application/vnd.github+json", "Content-Type": "application/json" }
-    }).then(function (r) {
-      if (r.status === 401) throw new Error("GitHub didn't accept that token.");
-      if (r.status === 403 || r.status === 404) throw new Error("That token can't make gists. Make one with \"gist\" ticked.");
-      if (!r.ok) throw new Error("GitHub didn't respond (" + r.status + "). It will try again on your next change.");
-      return r.json();
-    });
-  }
-  function connect(token) {
-    sync = { token: token, connecting: true }; render();
-    gistApi("POST", "", { description: "Aurix widget data", public: false, files: { "aurix.json": { content: widgetData() } } })
-      .then(function (g) { sync = { token: token, gist: g.id, at: Date.now() }; })
-      .catch(function (e) { sync = { err: navigator.onLine === false ? "You're offline. Try again when you're connected." : e.message }; })
-      .then(function () { saveSync(); render(); });
-  }
-  function scheduleSync() { if (!sync || !sync.gist) return; clearTimeout(syncTimer); syncTimer = setTimeout(pushSync, 1500); }
-  function pushSync() {
-    if (!sync.gist) return;
-    if (syncing) { syncAgain = true; return; }
-    syncing = true;
-    gistApi("PATCH", "/" + sync.gist, { files: { "aurix.json": { content: widgetData() } } })
-      .then(function () { sync.at = Date.now(); sync.err = ""; })
-      .catch(function (e) { sync.err = navigator.onLine === false ? "Offline. The widget will update when you're back online." : e.message; })
-      .then(function () {
-        syncing = false; saveSync();
-        if (alarmOpen) render();
-        if (syncAgain) { syncAgain = false; pushSync(); }
-      });
-  }
-  window.addEventListener("online", scheduleSync);
-  function widgetHtml() {
-    var out = '<section class="alarm"><div class="a-head"><h2>Home Screen widget</h2></div>';
-    if (!sync.gist) {
-      out += '<p>Shows your top priorities on your Home Screen and Lock Screen with the free Scriptable app. Aurix keeps a private copy of your list in a secret GitHub gist for the widget to read.</p>' +
-        '<ol>' +
-          '<li><a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Aurix%20widget" target="_blank" rel="noopener">Make a GitHub token</a>. Leave just <b>gist</b> ticked, set <b>Expiration</b> to <b>No expiration</b>, then tap <b>Generate token</b> and copy it.</li>' +
-          '<li>Paste it here:</li>' +
-        '</ol>' +
-        '<form class="token" data-form="token"><input type="password" data-keep="token" placeholder="ghp_…" aria-label="GitHub token" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">' +
-          '<button type="submit">' + (sync.connecting ? 'Connecting…' : 'Connect') + '</button></form>' +
-        (sync.err ? '<p class="err">' + esc(sync.err) + '</p>' : '');
-    } else {
-      out += '<p>' + (sync.err ? '<span class="err">' + esc(sync.err) + '</span>'
-          : 'Connected' + (sync.at ? ' · last synced ' + new Date(sync.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : '')) + '</p>' +
-        '<ol>' +
-          '<li>Install <a href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener">Scriptable</a> from the App Store.</li>' +
-          '<li>Tap <b>Copy widget script</b> below.</li>' +
-          '<li>In Scriptable, tap <b>+</b>, paste, and rename it <b>Aurix</b> at the top. Tap <b>Done</b>.</li>' +
-          '<li>Hold an empty spot on your Home Screen, tap <b>Edit</b> → <b>Add Widget</b> → <b>Scriptable</b>, pick a size and add it.</li>' +
-          '<li>Hold the widget, tap <b>Edit Widget</b>, and set <b>Script</b> to <b>Aurix</b>.</li>' +
-        '</ol>' +
-        '<p>The widget refreshes on its own every 15 minutes or so; iPhone decides the exact timing.</p>' +
-        (showScript ? '<p>Copying didn\'t work here. Select all of this and copy it:</p><textarea class="script" readonly>' + esc($("widget-src").textContent.trim().replace("__GIST__", sync.gist)) + '</textarea>' : '') +
-        '<div class="a-btns"><button type="button" class="go" data-al="copy">' + (copied ? 'Copied ✓' : 'Copy widget script') + '</button>' +
-          '<button type="button" data-al="disconnect">Disconnect</button></div>';
-    }
-    return out + '<div class="a-btns"><button type="button" data-al="close">Close</button></div></section>';
-  }
-  scheduleSync();
 
   // Runs a few times a second: just the numbers, so typing elsewhere isn't disturbed.
   function tick() {
@@ -623,8 +404,8 @@ Script.complete();
     [].forEach.call(root.querySelectorAll("input[data-keep]"), function (el) { if (el.value) keepAll[el.getAttribute("data-keep")] = el.value; });
 
     var ps = data.priorities;
-    var html = (alarmOpen ? alarmHtml() + widgetHtml() : "") + (data.timer ? focusHtml() : "");
-    $("bell").classList.toggle("on", alarmOpen);
+    var html = (alarmOpen ? alarmHtml() : "") + (data.timer ? focusHtml() : "");
+    $("bell").classList.toggle("on", !!data.alarm);
     $("bell").setAttribute("aria-expanded", alarmOpen);
     keepAwake(!!(data.timer && data.timer.end));
     if (!ps.length) {
@@ -772,7 +553,6 @@ Script.complete();
     e.preventDefault();
     var f = e.target, input = f.querySelector("input"), text = input.value.trim();
     var kind = f.getAttribute("data-form"), p = prio(Number(f.getAttribute("data-p")));
-    if (kind === "token") { if (text) connect(text); return; }
     if (kind === "task" && p && text) {
       p.tasks.push({ id: newId(), text: text });
       input.value = "";
