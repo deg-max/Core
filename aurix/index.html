@@ -214,6 +214,102 @@
     });
   }
 
+  // ---------- smart timer ----------
+  // A task with a length in its name ("15 minute study", "study 30 min", "1 hr workout",
+  // "1h 30m", "45-minute read") gets a timer. One timer runs at a time, kept in data.timer:
+  // { p, t, total, end } while running, { p, t, total, left } while paused, plus up: true once time's up.
+  var H = "(?:hours|hour|hrs|hr|h)", M = "(?:minutes|minute|mins|min|m)", NUM = "(\\d+(?:\\.\\d+)?)\\s*-?\\s*";
+  var reHM = new RegExp(NUM + H + "(?![a-z])(?:\\s*(?:and\\s*)?(\\d+)\\s*-?\\s*" + M + "(?![a-z]))?", "i");
+  var reM = new RegExp(NUM + M + "(?![a-z])", "i");
+  function taskMinutes(text) {
+    var m = reHM.exec(text), mins = 0;
+    if (m) mins = parseFloat(m[1]) * 60 + (m[2] ? parseInt(m[2], 10) : 0);
+    else if ((m = reM.exec(text))) mins = parseFloat(m[1]);
+    return mins > 0 && mins <= 720 ? mins : 0;
+  }
+  function durText(mins) {
+    var h = Math.floor(mins / 60), m = Math.round(mins % 60);
+    return h ? h + "h" + (m ? " " + m + "m" : "") : m + "m";
+  }
+  function clockText(ms) {
+    var s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    s = s % 60;
+    return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0");
+  }
+  function remaining(tm) { return tm.end ? tm.end - Date.now() : tm.left; }
+  function timerTask() {
+    var tm = data.timer, p = tm && prio(tm.p);
+    var t = p && p.tasks.filter(function (x) { return x.id === tm.t; })[0];
+    return t ? { p: p, t: t } : null;
+  }
+
+  // The chime needs a tap to unlock sound on iPhone, so starting a timer does that.
+  var audio = null;
+  function unlockAudio() {
+    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {}
+  }
+  function chime() {
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    if (!audio) return;
+    [880, 1108.7, 1318.5].forEach(function (f, i) {
+      var o = audio.createOscillator(), g = audio.createGain(), t0 = audio.currentTime + i * 0.22;
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.3, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+      o.connect(g); g.connect(audio.destination); o.start(t0); o.stop(t0 + 0.75);
+    });
+  }
+  // Keep the screen on while a timer runs, where the phone allows it.
+  var lock = null;
+  function keepAwake(on) {
+    if (on && !lock && navigator.wakeLock) {
+      navigator.wakeLock.request("screen").then(function (l) { lock = l; l.addEventListener("release", function () { lock = null; }); }).catch(function () {});
+    } else if (!on && lock) { lock.release(); lock = null; }
+  }
+
+  function focusHtml() {
+    var tt = timerTask(), tm = data.timer;
+    if (!tt) { data.timer = null; return ""; }
+    var left = remaining(tm), pct = Math.min(100, Math.max(0, 100 - left / tm.total * 100));
+    var id = ' data-p="' + tt.p.id + '"';
+    return '<section class="focus' + (tm.up ? ' up' : '') + '">' +
+      '<div class="f-label">' + (tm.up ? "Time's up" : tm.end ? "Focus" : "Paused") + '</div>' +
+      '<div class="f-task">' + esc(tt.t.text) + '</div>' +
+      '<div class="f-time" data-cd>' + (tm.up ? "0:00" : clockText(left)) + '</div>' +
+      '<div class="f-bar"><i data-bar style="width:' + (tm.up ? 100 : pct) + '%"></i></div>' +
+      '<div class="f-btns">' + (tm.up
+        ? '<button type="button" class="go" data-act="tdone"' + id + '>Done ✓</button><button type="button" data-act="tmore"' + id + '>+5 min</button>'
+        : '<button type="button" data-act="tpause"' + id + '>' + (tm.end ? "Pause" : "Resume") + '</button>' +
+          '<button type="button" class="go" data-act="tdone"' + id + '>Done ✓</button>') +
+        '<button type="button" data-act="tstop"' + id + ' aria-label="Stop timer">Stop</button>' +
+      '</div></section>';
+  }
+  function playLabel(p, t) {
+    var tm = data.timer;
+    if (tm && tm.t === t.id) return tm.up ? "Time's up" : (tm.end ? "" : "❚❚ ") + clockText(remaining(tm));
+    return "▶ " + durText(taskMinutes(t.text));
+  }
+
+  // Runs a few times a second: just the numbers, so typing elsewhere isn't disturbed.
+  function tick() {
+    var tm = data.timer;
+    if (!tm || tm.up) return;
+    var left = remaining(tm);
+    if (tm.end && left <= 0) {
+      tm.up = true; tm.end = null; tm.left = 0; save(); render(); chime();
+      return;
+    }
+    var cd = root.querySelector("[data-cd]"), bar = root.querySelector("[data-bar]"), row = root.querySelector('.play[data-t="' + tm.t + '"]');
+    if (cd) cd.textContent = clockText(left);
+    if (bar) bar.style.width = Math.min(100, 100 - left / tm.total * 100) + "%";
+    if (row) row.textContent = (tm.end ? "" : "❚❚ ") + clockText(left);
+  }
+  setInterval(tick, 250);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") { tick(); keepAwake(!!(data.timer && data.timer.end)); }
+  });
+
   // ---------- rendering ----------
   function render() {
     // Keep whatever is being typed (and the cursor) across a redraw.
