@@ -369,7 +369,9 @@
     return fetch("https://api.web3forms.com/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ access_key: mailKey(), subject: "Aurix timer " + secs, from_name: "Aurix", message: label || "Timer from Aurix" })
+      body: JSON.stringify({ access_key: mailKey(), subject: "Aurix timer " + secs, from_name: "Aurix",
+        // The seconds come first in the body too, so a shortcut that reads the whole email still finds them first.
+        message: secs + " seconds · " + (label || "Timer from Aurix") })
     }).then(function (r) { return r.json(); }).then(function (j) { if (!j.success) throw new Error(j.message || "Not sent"); });
   }
   function ringWithClock(ms) {
