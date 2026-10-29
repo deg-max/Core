@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aurix iPhone Timer Setup</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap">
+<style>
+  /* Setup guide for ringing the iPhone Clock app from Aurix. Same look as Aurix: black with the violet glow. */
+  :root {
+    --bg: #000000;
+    --panel: #0b0a16;
+    --panel-2: #12101f;
+    --line: #221e3a;
+    --ink: #eeeaff;
+    --dim: #8f8ab5;
+    --violet: #8b5cf6;
+    --soft: #c7bdff;
+    --glow: linear-gradient(135deg, #a46bff 0%, #6a5cff 50%, #3f8cff 100%);
+    --font: "Sora", system-ui, -apple-system, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  :root {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(120% 60% at 50% -10%, rgba(110, 80, 255, 0.22), transparent 60%), var(--bg);
+    background-attachment: fixed;
+    color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.5;
+    padding-block: 20px 60px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .app { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  header { display: flex; align-items: center; gap: 10px; }
+  header img { width: 36px; height: 36px; mix-blend-mode: screen; }
+  header a { color: var(--dim); font-size: 14px; font-weight: 600; text-decoration: none; margin-left: auto; padding: 8px 0; }
+  h1 { font-size: 24px; font-weight: 600; margin: 6px 0 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .lead { color: var(--dim); margin: -4px 0 4px; }
+
+  .progress { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .bar { flex: 1; height: 6px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--glow); box-shadow: 0 0 10px rgba(110, 90, 255, 0.7); transition: width 0.2s; }
+
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px 16px 6px; }
+  section.done { border-color: rgba(139, 92, 246, 0.55); box-shadow: 0 0 22px rgba(110, 90, 255, 0.16); }
+  h2 { font-size: 17px; font-weight: 600; margin: 0 0 2px; display: flex; align-items: baseline; gap: 10px; }
+  h2 .n {
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: grid; place-content: center;
+    background: var(--glow); color: #fff; font-size: 13px; font-weight: 700; transform: translateY(-1px);
+  }
+  h2 .t { color: var(--dim); font-size: 13px; font-weight: 500; margin-left: auto; white-space: nowrap; }
+  .why { color: var(--dim); font-size: 14px; margin: 0 0 6px; }
+
+  ol { list-style: none; margin: 0; padding: 0; }
+  li { border-top: 1px solid var(--line); }
+  li:first-child { border-top: 0; }
+  li label { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; cursor: pointer; }
+  li .txt { flex: 1; min-width: 0; font-size: 15px; }
+  li b { color: var(--soft); font-weight: 600; }
+  li code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px; color: #fff;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; white-space: nowrap;
+  }
+  li .sub { display: block; color: var(--dim); font-size: 13px; margin-top: 4px; }
+  input[type=checkbox] {
+    -webkit-appearance: none; appearance: none; margin: 1px 0 0; flex: 0 0 auto;
+    width: 24px; height: 24px; border: 2px solid #4a4470; border-radius: 50%; background: none; cursor: pointer;
+    display: grid; place-content: center;
+  }
+  input[type=checkbox]:checked { background: var(--glow); border-color: transparent; box-shadow: 0 0 12px rgba(110, 90, 255, 0.6); }
+  input[type=checkbox]:checked::after { content: "✓"; color: #fff; font-weight: 700; font-size: 14px; line-height: 1; }
+  input[type=checkbox]:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+  li:has(input:checked) .txt { color: var(--dim); }
+  li:has(input:checked) b { color: var(--dim); }
+
+  a.btn {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 8px; padding: 0 14px;
+    border-radius: 12px; background: var(--glow); color: #fff; font-weight: 600; font-size: 14px; text-decoration: none;
+    box-shadow: 0 0 16px rgba(110, 90, 255, 0.4);
+  }
+  a.btn.quiet { background: var(--panel-2); border: 1px solid var(--line); box-shadow: none; color: var(--ink); }
+  a:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 12px; font-size: 13px; }
+  .flow span { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+  .flow span.hl { border-color: rgba(139, 92, 246, 0.6); color: #fff; }
+  .flow i { font-style: normal; color: var(--dim); }
+
+  details { border-top: 1px solid var(--line); padding: 12px 0; }
+  details:first-of-type { border-top: 0; }
+  summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+  details p { color: var(--dim); font-size: 14px; margin: 8px 0 0; }
+  .reset { align-self: center; background: none; border: 0; color: var(--dim); font: 600 14px var(--font); padding: 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <img src="logo.png" alt="">
+    <a href="./">← Back to Aurix</a>
+  </header>
+  <h1>Ring your iPhone timer from Aurix</h1>
+  <p class="lead">When you press play on a timed task in Aurix, on your phone or your PC, your iPhone's Clock app starts the same timer. It rings even if Aurix is closed or your phone is on silent. About 6 minutes, once. Tick each step as you go.</p>
+
+  <div class="progress"><div class="bar"><i id="bar"></i></div><span id="count">0 of 0</span></div>
+
+  <section data-part>
+    <h2><span class="n">1</span>Check your iPhone<span class="t">1 min</span></h2>
+    <p class="why">The timer travels by email, so your iCloud mail has to reach the phone instantly.</p>
+    <ol>
+      <li><label><input type="checkbox"><span class="txt">You're on <b>iOS 17 or later</b>.<span class="sub">Settings → General → About → iOS Version.</span></span></label></li>
+      <li><label><input type="checkbox"><span class="txt"><b>iCloud Mail</b> is on.<span class="sub">Settings → tap your name → iCloud → iCloud Mail → Use on this iPhone.</span></span></label></li>
+      <li><label><input type="checkbox"><span class="txt"><b>Push</b> is on for new mail.<span class="sub">Settings → Apps → Mail → Mail Accounts → Fetch New Data → turn on Push. (On iOS 17: Settings → Mail → Accounts → Fetch New Data.)</span></span></label></li>
+    </ol>
+  </section>
+
+  <section data-part>
+    <h2><span class="n">2</span>Get your free key<span class="t">2 min</span></h2>
+    <p class="why">Web3Forms is the free service that sends the email. The key tells it to send to you.</p>
+    <ol>
+      <li><label><input type="checkbox"><span class="txt">Open Web3Forms, type your <b>iCloud email</b> (the one ending in @icloud.com) and tap <b>Create Access Key</b>.
+        <a class="btn" href="https://web3forms.com/#start" target="_blank" rel="noopener">Open web3forms.com</a></span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Open <b>Mail</b>, find the email from Web3Forms and <b>copy the access key</b>.<span class="sub">It's a long code like <code>a1b2c3d4-…</code>. Not there? Check Junk.</span></span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Open <b>Aurix</b> from your Home Screen, tap the <b>bell</b>, turn on <b>Ring when time's up</b>, paste the key and tap <b>Save</b>.
+        <a class="btn quiet" href="./">Open Aurix</a></span></label></li>
+      <li><label><input type="checkbox"><span class="txt">For the <b>PC</b>: send the key to Claude in your terminal, or paste it into the bell on the PC the same way.</span></label></li>
+    </ol>
+  </section>
+
+  <section data-part>
+    <h2><span class="n">3</span>Make the automation<span class="t">3 min</span></h2>
+    <p class="why">This tells your iPhone: when an "Aurix timer" email arrives, start a timer that long.</p>
+    <div class="flow" aria-hidden="true"><span>Email arrives</span><i>→</i><span>Get Numbers</span><i>→</i><span>First Item</span><i>→</i><span class="hl">Start Timer</span></div>
+    <ol>
+      <li><label><input type="checkbox"><span class="txt">Open <b>Shortcuts</b> and tap <b>Automation</b> at the bottom.</span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Tap <b>+</b> (or <b>New Automation</b>), scroll down and choose <b>Email</b>.</span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Tap <b>Subject Contains</b>, type <code>Aurix timer</code> and tap <b>Done</b>.<span class="sub">Leave Sender, Account and Recipient as they are.</span></span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Choose <b>Run Immediately</b> and turn off <b>Notify When Run</b>. Tap <b>Next</b>.</span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Tap <b>New Blank Automation</b>.</span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Tap <b>Add Action</b>, search <code>Get Numbers</code> and add <b>Get Numbers from Input</b>.</span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Tap its blue <b>Input</b> and choose <b>Shortcut Input</b>. Tap <b>Shortcut Input</b> again and pick <b>Subject</b>.<span class="sub">If Subject isn't in the list, leave it as Shortcut Input. It still works.</span></span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Search <code>Get Item</code> and add <b>Get Item from List</b>. It should read <b>Get First Item from Numbers</b>.</span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Search <code>Start Timer</code> and add it. Tap its number and choose <b>Item from List</b>. Tap the unit and choose <b>seconds</b>.</span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Tap <b>Done</b> in the top right.</span></label></li>
+    </ol>
+  </section>
+
+  <section data-part>
+    <h2><span class="n">4</span>Test it<span class="t">30 sec</span></h2>
+    <ol>
+      <li><label><input type="checkbox"><span class="txt">In Aurix, tap the <b>bell</b> → <b>Test: 10 seconds</b>, then lock your phone.</span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Within a few seconds, a <b>10-second timer</b> starts in the Clock app and rings.</span></label></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>If it doesn't ring</h2>
+    <details><summary>No email arrived</summary>
+      <p>Check the key in Aurix's bell panel. A red message there means the email wasn't sent. Make sure the key came from your iCloud address.</p></details>
+    <details><summary>The email went to Junk</summary>
+      <p>Open it in Junk and tap <b>Move to Inbox</b> (or Not Junk), then test again. Automations only see mail in your inbox.</p></details>
+    <details><summary>The email arrived but no timer started</summary>
+      <p>In Shortcuts → Automation, open the Email automation and check it says <b>Run Immediately</b> and Subject Contains <b>Aurix timer</b>, spelled exactly.</p></details>
+    <details><summary>The timer is the wrong length</summary>
+      <p>Check Start Timer is set to <b>seconds</b>, not minutes, and that its number is <b>Item from List</b>.</p></details>
+    <details><summary>Good to know</summary>
+      <p>The iPhone timer starts when the email lands, usually a few seconds late. Pausing or stopping in Aurix can't stop it, so cancel it in the Clock app. Web3Forms is free for about 250 emails a month, and each start or resume uses one.</p></details>
+  </section>
+
+  <button class="reset" type="button" id="reset">Untick everything</button>
+</main>
+<script>
+(function () {
+  "use strict";
+  // Ticks are remembered on this device only, so you can leave and come back mid-setup.
+  var KEY = "aurix-setup", boxes = [].slice.call(document.querySelectorAll("li input[type=checkbox]"));
+  var saved = [];
+  try { saved = JSON.parse(localStorage.getItem(KEY) || "[]") || []; } catch (e) {}
+  boxes.forEach(function (b, i) { b.checked = !!saved[i]; });
+  function update() {
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    document.getElementById("count").textContent = done + " of " + boxes.length;
+    document.getElementById("bar").style.width = (done / boxes.length * 100) + "%";
+    [].forEach.call(document.querySelectorAll("section[data-part]"), function (s) {
+      var bs = s.querySelectorAll("input[type=checkbox]");
+      s.classList.toggle("done", [].every.call(bs, function (b) { return b.checked; }));
+    });
+  }
+  function store() {
+    try { localStorage.setItem(KEY, JSON.stringify(boxes.map(function (b) { return b.checked; }))); } catch (e) {}
+  }
+  document.addEventListener("change", function () { store(); update(); });
+  // Links inside a step open without ticking it.
+  document.addEventListener("click", function (e) { if (e.target.closest("a.btn")) e.stopPropagation(); }, true);
+  document.getElementById("reset").addEventListener("click", function () {
+    boxes.forEach(function (b) { b.checked = false; }); store(); update();
+  });
+  update();
+})();
+</script>
+</body>
+</html>
