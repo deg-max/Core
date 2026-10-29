@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GTA VI Countdown</title>
+<meta name="description" content="Live countdown to Grand Theft Auto VI, to the second.">
+<meta name="theme-color" content="#12062a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+  /* Built for a TV across the room (Xbox Edge, pinned to Home), still fine on a phone or PC.
+     Everything scales off the viewport, inside a 5% TV-safe margin. */
+  :root {
+    --night: #12062a;
+    --ink: #fff7f0;
+    --dim: rgba(255, 240, 230, 0.72);
+    --pink: #ff3d8b;
+    --amber: #ffb347;
+    --card: rgba(18, 6, 42, 0.42);
+    --edge: rgba(255, 255, 255, 0.16);
+    --num: "Oswald", "Arial Narrow", system-ui, sans-serif;
+    --text: "Inter", system-ui, -apple-system, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; overflow: hidden; color: var(--ink); font-family: var(--text);
+    background: var(--night);
+    display: grid; place-items: center;
+    padding: max(5vh, env(safe-area-inset-top, 0px)) max(5vw, env(safe-area-inset-right, 0px)) max(5vh, env(safe-area-inset-bottom, 0px)) max(5vw, env(safe-area-inset-left, 0px));
+    cursor: none;
+  }
+  /* Sunset sky, sun and a sea of scanlines. */
+  .sky { position: fixed; inset: 0; z-index: -1; overflow: hidden;
+    background: linear-gradient(180deg, #12062a 0%, #3a0d5c 30%, #a3195b 62%, #ff6a3d 84%, #ffb347 100%); }
+  .sun { position: absolute; left: 50%; bottom: 14vh; width: 62vmin; aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%;
+    background: linear-gradient(180deg, #ffe08a 0%, #ff8a5c 55%, #ff3d8b 100%);
+    -webkit-mask: repeating-linear-gradient(180deg, #000 0 58%, transparent 58% 62%, #000 62% 66%, transparent 66% 71%, #000 71% 76%, transparent 76% 82%, #000 82% 88%, transparent 88% 95%);
+            mask: linear-gradient(180deg, #000 0 56%, transparent 56% 59%, #000 59% 66%, transparent 66% 70%, #000 70% 77%, transparent 77% 82%, #000 82% 89%, transparent 89% 95%, #000 95%);
+    opacity: 0.85; filter: drop-shadow(0 0 6vmin rgba(255, 110, 120, 0.55)); }
+  .sea { position: absolute; left: 0; right: 0; bottom: 0; height: 16vh;
+    background: linear-gradient(180deg, rgba(18, 6, 42, 0.55), #12062a 85%); }
+  .sea::before { content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(180deg, rgba(255, 140, 120, 0.22) 0 2px, transparent 2px 14px); }
+
+  main { width: min(100%, 1600px); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 3.2vh; }
+  .kicker { font: 600 clamp(14px, 1.6vw, 26px) var(--text); letter-spacing: 0.4em; text-transform: uppercase; color: var(--dim); margin: 0; }
+  h1 { margin: -1vh 0 0; font: 700 clamp(56px, 11vw, 190px)/0.9 var(--num); letter-spacing: 0.02em;
+    background: linear-gradient(180deg, #fff 10%, #ffd0e4 45%, #ff7aa8 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0.04em 0.06em rgba(60, 0, 40, 0.5)); }
+
+  .clock { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(8px, 1.4vw, 28px); width: 100%; }
+  .unit { background: var(--card); border: 1px solid var(--edge); border-radius: clamp(10px, 1.2vw, 22px);
+    padding: 2.2vh 0 1.8vh; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .unit .n { display: block; font: 700 clamp(48px, 10vw, 200px)/1 var(--num); font-variant-numeric: tabular-nums; font-feature-settings: "tnum";
+    text-shadow: 0 0 0.25em rgba(255, 90, 140, 0.45); }
+  .unit .l { display: block; margin-top: 0.8vh; font: 600 clamp(12px, 1.3vw, 24px) var(--text); letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); }
+  .unit.sec .n { color: var(--amber); }
+
+  .when { margin: 0; font: 600 clamp(15px, 1.9vw, 34px) var(--text); }
+  .meta { margin: -1.6vh 0 0; font: 400 clamp(12px, 1.25vw, 22px) var(--text); color: var(--dim); }
+  .meta b { color: var(--ink); font-weight: 600; }
+
+  .out h1 { font-size: clamp(56px, 14vw, 240px); }
+  .done { font: 700 clamp(40px, 7vw, 130px)/1 var(--num); letter-spacing: 0.04em; color: var(--amber); text-shadow: 0 0 0.3em rgba(255, 120, 80, 0.6); }
+
+  /* Controller: A presses the focused button. Shown only when there's something to do. */
+  .fs { position: fixed; right: 3vw; bottom: 4vh; cursor: pointer;
+    font: 600 clamp(12px, 1.1vw, 20px) var(--text); color: var(--ink); background: rgba(18, 6, 42, 0.6);
+    border: 1px solid var(--edge); border-radius: 999px; padding: 0.9em 1.4em; }
+  .fs:focus-visible, .fs:focus { outline: 3px solid var(--amber); outline-offset: 3px; }
+  @media (max-width: 640px) {
+    .clock { grid-template-columns: repeat(2, 1fr); }
+    body { cursor: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"><div class="sun"></div><div class="sea"></div></div>
+
+<main id="main">
+  <p class="kicker">Grand Theft Auto</p>
+  <h1>VI</h1>
+  <div class="clock" id="clock" role="timer" aria-live="off">
+    <div class="unit"><span class="n" id="d">--</span><span class="l">Days</span></div>
+    <div class="unit"><span class="n" id="h">--</span><span class="l">Hours</span></div>
+    <div class="unit"><span class="n" id="m">--</span><span class="l">Minutes</span></div>
+    <div class="unit sec"><span class="n" id="s">--</span><span class="l">Seconds</span></div>
+  </div>
+  <p class="when" id="when"></p>
+  <p class="meta" id="meta"><b>PlayStation 5</b> &nbsp;·&nbsp; <b>Xbox Series X|S</b></p>
+</main>
+
+<button class="fs" id="fs" type="button" hidden>Press Ⓐ for full screen</button>
+
+<script>
+(function () {
+  "use strict";
+  // Release: Thursday 19 November 2026, midnight in this device's own time zone.
+  // ?date=2026-11-19T00:00:00 overrides it (read as local time; add Z or an offset for a fixed instant).
+  var param = new URLSearchParams(location.search).get("date");
+  var RELEASE = new Date(param || "2026-11-19T00:00:00").getTime();
+  var $ = function (id) { return document.getElementById(id); };
+
+  // The console's clock can be off. Compare it with the web server's clock once and correct
+  // for the difference when it's more than a second (the server's Date header has 1-second precision).
+  var skew = 0;
+  function checkClock() {
+    var sent = Date.now();
+    fetch(location.pathname + "?t=" + sent, { method: "HEAD", cache: "no-store" }).then(function (r) {
+      var server = Date.parse(r.headers.get("Date")), got = Date.now();
+      if (isNaN(server)) return;
+      var mid = (sent + got) / 2, diff = server + 500 - mid;
+      skew = Math.abs(diff) > 1500 ? diff : 0;
+    }).catch(function () {});
+  }
+
+  function pad(n) { return n < 10 ? "0" + n : String(n); }
+  var when = new Date(RELEASE);
+  $("when").textContent = isNaN(RELEASE) ? "Release date unknown" :
+    when.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) +
+    (when.getHours() || when.getMinutes() ? " · " + when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : " · midnight, your time");
+
+  var last = "";
+  function render() {
+    var left = RELEASE - (Date.now() + skew);
+    if (left <= 0) {
+      if (last !== "out") {
+        last = "out";
+        document.body.classList.add("out");
+        $("clock").outerHTML = '<div class="done">OUT NOW</div>';
+        document.title = "GTA VI is out";
+      }
+      return;
+    }
+    var s = Math.floor(left / 1000);
+    var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+    var key = d + ":" + h + ":" + m + ":" + (s % 60);
+    if (key === last) return;
+    last = key;
+    $("d").textContent = d;
+    $("h").textContent = pad(h);
+    $("m").textContent = pad(m);
+    $("s").textContent = pad(s % 60);
+    document.title = "GTA VI · " + d + "d " + pad(h) + ":" + pad(m) + ":" + pad(s % 60);
+  }
+  // Aim each tick just past the next second boundary so the seconds flip on time and never drift.
+  function loop() {
+    render();
+    var now = Date.now() + skew;
+    setTimeout(loop, 1000 - (((now % 1000) + 1000) % 1000) + 8);
+  }
+  loop();
+  checkClock();
+  setInterval(checkClock, 30 * 60 * 1000);
+  // Waking from rest mode: catch up straight away.
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { checkClock(); render(); keepAwake(); } });
+
+  // Keep the TV from dimming while the countdown is up, where the browser allows it.
+  var lock = null;
+  function keepAwake() {
+    if (!("wakeLock" in navigator) || lock) return;
+    navigator.wakeLock.request("screen").then(function (l) { lock = l; l.addEventListener("release", function () { lock = null; }); }).catch(function () {});
+  }
+  keepAwake();
+
+  // Full screen needs a button press; offer it with focus already on it, so A on a controller works.
+  var fs = $("fs"), root = document.documentElement;
+  if (root.requestFullscreen && !window.matchMedia("(display-mode: fullscreen)").matches) {
+    fs.hidden = false; fs.focus();
+    fs.addEventListener("click", function () { root.requestFullscreen().then(keepAwake).catch(function () {}); });
+    document.addEventListener("fullscreenchange", function () { fs.hidden = !!document.fullscreenElement; if (!fs.hidden) fs.focus(); });
+  }
+})();
+</script>
+</body>
+</html>
