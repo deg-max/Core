@@ -86,7 +86,7 @@
   li:has(input:checked) b { color: var(--dim); }
 
   a.btn {
-    display: inline-flex; align-items: center; justify-content: center; min-height: 40px; margin-top: 8px; padding: 0 14px;
+    display: inline-flex; align-items: center; justify-content: center; min-height: 40px; margin: -2px 0 12px 36px; padding: 0 14px;
     border-radius: 12px; background: var(--glow); color: #fff; font-weight: 600; font-size: 14px; text-decoration: none;
     box-shadow: 0 0 16px rgba(110, 90, 255, 0.4);
   }
@@ -130,11 +130,11 @@
     <h2><span class="n">2</span>Get your free key<span class="t">2 min</span></h2>
     <p class="why">Web3Forms is the free service that sends the email. The key tells it to send to you.</p>
     <ol>
-      <li><label><input type="checkbox"><span class="txt">Open Web3Forms, type your <b>iCloud email</b> (the one ending in @icloud.com) and tap <b>Create Access Key</b>.
-        <a class="btn" href="https://web3forms.com/#start" target="_blank" rel="noopener">Open web3forms.com</a></span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Open Web3Forms, type your <b>iCloud email</b> (the one ending in @icloud.com) and tap <b>Create Access Key</b>.</span></label>
+        <a class="btn" href="https://web3forms.com/#start" target="_blank" rel="noopener">Open web3forms.com</a></li>
       <li><label><input type="checkbox"><span class="txt">Open <b>Mail</b>, find the email from Web3Forms and <b>copy the access key</b>.<span class="sub">It's a long code like <code>a1b2c3d4-…</code>. Not there? Check Junk.</span></span></label></li>
-      <li><label><input type="checkbox"><span class="txt">Open <b>Aurix</b> from your Home Screen, tap the <b>bell</b>, turn on <b>Ring when time's up</b>, paste the key and tap <b>Save</b>.
-        <a class="btn quiet" href="./">Open Aurix</a></span></label></li>
+      <li><label><input type="checkbox"><span class="txt">Open <b>Aurix</b> from your Home Screen, tap the <b>bell</b>, turn on <b>Ring when time's up</b>, paste the key and tap <b>Save</b>.</span></label>
+        <a class="btn quiet" href="./">Open Aurix</a></li>
       <li><label><input type="checkbox"><span class="txt">For the <b>PC</b>: send the key to Claude in your terminal, or paste it into the bell on the PC the same way.</span></label></li>
     </ol>
   </section>
@@ -202,8 +202,6 @@
     try { localStorage.setItem(KEY, JSON.stringify(boxes.map(function (b) { return b.checked; }))); } catch (e) {}
   }
   document.addEventListener("change", function () { store(); update(); });
-  // Links inside a step open without ticking it.
-  document.addEventListener("click", function (e) { if (e.target.closest("a.btn")) e.stopPropagation(); }, true);
   document.getElementById("reset").addEventListener("click", function () {
     boxes.forEach(function (b) { b.checked = false; }); store(); update();
   });
