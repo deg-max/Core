@@ -221,6 +221,24 @@
   .job-k { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); margin-bottom: -8px; }
   ul.parts .pn { font-weight: 700; overflow-wrap: anywhere; }
   ul.parts .hm { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 6.5ch; text-align: right; }
+  /* History: one row per clock-out, grouped by day, with the efficiency you actually ran. */
+  ul.hist { list-style: none; margin: 0; padding: 0; }
+  ul.hist li.day {
+    display: flex; justify-content: space-between; gap: 12px; padding: 14px 4px 6px; border-bottom: 1px solid var(--line);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim);
+  }
+  ul.hist li.day b { font-family: var(--mono); letter-spacing: 0; color: var(--ink); }
+  ul.hist li.run { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+  ul.hist .what { flex: 1; min-width: 0; }
+  ul.hist .pn { font-family: var(--mono); font-weight: 700; overflow-wrap: anywhere; }
+  ul.hist .when { display: block; font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  ul.hist .pct { font-family: var(--mono); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; }
+  ul.hist .pct.hit { color: var(--ok); }
+  ul.hist .pct.miss { color: var(--danger); }
+  ul.hist button.rm { flex: 0 0 auto; width: 36px; height: 36px; border: 0; background: none; color: var(--dim); font-size: 20px; cursor: pointer; border-radius: 6px; }
+  ul.hist button.rm.armed { width: auto; padding: 0 8px; background: var(--danger); color: var(--panel); font-size: 13px; font-weight: 600; }
+  .hist-more { display: flex; justify-content: space-between; gap: 18px; }
+
   .empty { padding: 16px 4px; color: var(--dim); font-size: 15px; border-top: 1px solid var(--line); }
   .empty b { font-family: var(--mono); color: var(--ink); }
 
