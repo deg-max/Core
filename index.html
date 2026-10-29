@@ -709,7 +709,7 @@
           (isFinite(left) ? (left >= 0 ? minutesLeftText(left) + ' left' : minutesLeftText(left) + ' over') : '') + '</span>' +
         '<button class="ghost" type="button" id="clockout">Clock out</button>' +
       '</div>';
-    $("clockout").onclick = function () { job = null; saveJob(); renderJob(); renderList(); if (!$("steps")) renderReadout(); };
+    $("clockout").onclick = function () { endJob(); job = null; saveJob(); renderJob(); renderList(); if (!$("steps")) renderReadout(); };
   }
   function onClockIn(btn) {
     var p = findPart(btn.getAttribute("data-clockin"));
