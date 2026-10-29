@@ -101,7 +101,31 @@
 
   ul.tasks { list-style: none; margin: 0; padding: 0 14px; }
   ul.tasks li { border-top: 1px solid var(--line); }
-  ul.tasks label { display: flex; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer; }
+  ul.tasks li { display: flex; align-items: center; gap: 8px; }
+  ul.tasks label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer; }
+
+  /* Smart timer: tasks with a time in their name get a play button. */
+  .play {
+    flex: 0 0 auto; border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 6px 12px;
+    font-size: 13px; font-weight: 600; color: #b9b0ff; font-variant-numeric: tabular-nums; cursor: pointer;
+  }
+  .play.on { background: var(--glow); color: #fff; border-color: transparent; box-shadow: 0 0 12px rgba(110, 90, 255, 0.5); }
+  .focus {
+    background: var(--panel); border: 1px solid rgba(139, 92, 246, 0.55); border-radius: 18px; padding: 16px;
+    box-shadow: 0 0 28px rgba(110, 90, 255, 0.22); display: flex; flex-direction: column; gap: 12px;
+  }
+  .f-label { font-size: 12px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+  .f-task { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; margin-top: -6px; }
+  .f-time { font-size: 56px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .focus.up .f-time { background: var(--glow); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .f-bar { height: 6px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+  .f-bar i { display: block; height: 100%; background: var(--glow); box-shadow: 0 0 10px rgba(110, 90, 255, 0.7); }
+  .f-btns { display: flex; gap: 8px; }
+  .f-btns button {
+    flex: 1; min-height: 46px; border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .f-btns button.go { background: var(--glow); border: 0; color: #fff; box-shadow: 0 0 18px rgba(110, 90, 255, 0.45); }
   input[type=checkbox] {
     -webkit-appearance: none; appearance: none; margin: 0; flex: 0 0 auto;
     width: 24px; height: 24px; border: 2px solid #4a4470; border-radius: 50%; background: none; cursor: pointer;
