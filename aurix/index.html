@@ -359,27 +359,68 @@
   // A web app can't ring once it's closed, so with the alarm on, starting a timer also runs a
   // Shortcut named "Aurix Timer" that starts the iPhone's own Clock timer for the same time.
   var SHORTCUT = "Aurix Timer";
-  function ringWithClock(ms) {
+  // With an email key saved on this device, a timer instead sends an email whose subject is
+  // "Aurix timer <seconds>"; an iPhone Shortcuts automation on that email starts the Clock timer.
+  // That works from any device and never leaves Aurix. Email goes through Web3Forms
+  // (free, sends to the address the key was made for). The key stays on this device.
+  var MAILKEY = "aurix-mailkey", mailStatus = "", mailErr = false;
+  function mailKey() { try { return localStorage.getItem(MAILKEY) || ""; } catch (e) { return ""; } }
+  function sendTimerMail(secs, label) {
+    return fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ access_key: mailKey(), subject: "Aurix timer " + secs, from_name: "Aurix", message: label || "Timer from Aurix" })
+    }).then(function (r) { return r.json(); }).then(function (j) { if (!j.success) throw new Error(j.message || "Not sent"); });
+  }
+  function ringWithClock(ms, label) {
     if (!data.alarm || !(ms > 0)) return;
-    location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=" + Math.max(1, Math.round(ms / 1000));
+    var secs = Math.max(1, Math.round(ms / 1000));
+    if (mailKey()) {
+      sendTimerMail(secs, label).catch(function (err) {
+        mailStatus = "The iPhone timer email didn't send: " + err.message; mailErr = true; alarmOpen = true; render();
+      });
+      return;
+    }
+    location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=" + secs;
   }
   function alarmHtml() {
+    var key = mailKey();
     return '<section class="alarm">' +
       '<div class="a-head"><h2>Ring when time\'s up</h2>' +
         '<button type="button" class="switch" role="switch" aria-checked="' + !!data.alarm + '" aria-label="Ring with the iPhone Clock app" data-al="toggle"></button></div>' +
-      '<p>Rings through your iPhone\'s Clock app, even when Aurix is closed or your phone is on silent. Each timer briefly opens Shortcuts; swipe back to Aurix.</p>' +
-      '<p>One-time setup:</p>' +
+      '<p>Starts a timer in your iPhone\'s Clock app, so it rings even when Aurix is closed or your phone is on silent.</p>' +
+      '<h3>By email: from any device, no pop-up</h3>' +
+      '<form class="key" data-al-form="key"><input type="text" data-keep="mailkey" placeholder="Web3Forms access key" aria-label="Web3Forms access key" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(key) + '"><button type="submit">Save</button></form>' +
+      (mailStatus ? '<p class="a-status' + (mailErr ? ' err' : '') + '">' + esc(mailStatus) + '</p>' : '') +
       '<ol>' +
-        '<li>Open the <b>Shortcuts</b> app and tap <b>+</b>.</li>' +
-        '<li>Name it <b>Aurix Timer</b>, exactly.</li>' +
-        '<li>Add the action <b>Start Timer</b>.</li>' +
-        '<li>Tap its number and choose <b>Shortcut Input</b>. Tap the unit and choose <b>seconds</b>.</li>' +
-        '<li>Tap <b>Done</b>, then test it here.</li>' +
+        '<li>Go to <b>web3forms.com</b>, enter your <b>iCloud</b> email, and paste the access key they email you above. Do this on each device you use Aurix on.</li>' +
+        '<li>On your iPhone, open <b>Shortcuts → Automation → + → Email</b>. Set <b>Subject Contains</b> to <b>Aurix timer</b>, choose <b>Run Immediately</b>, then <b>Next → New Blank Automation</b>.</li>' +
+        '<li>Add <b>Get Numbers from Input</b>. Tap its input, choose <b>Shortcut Input</b>, then tap that and pick <b>Subject</b>.</li>' +
+        '<li>Add <b>Start Timer</b>. Set its number to <b>Numbers</b> and the unit to <b>seconds</b>. Tap <b>Done</b>.</li>' +
+        '<li>Tap <b>Test</b> below. If the email lands in Junk, mark it <b>Not Junk</b>.</li>' +
       '</ol>' +
+      (key ? '' :
+      '<details><summary>Or, on this iPhone only: run a Shortcut</summary>' +
+        '<p>Each timer briefly opens Shortcuts; swipe back to Aurix.</p>' +
+        '<ol>' +
+          '<li>Open the <b>Shortcuts</b> app and tap <b>+</b>.</li>' +
+          '<li>Name it <b>Aurix Timer</b>, exactly.</li>' +
+          '<li>Add the action <b>Start Timer</b>.</li>' +
+          '<li>Tap its number and choose <b>Shortcut Input</b>. Tap the unit and choose <b>seconds</b>.</li>' +
+          '<li>Tap <b>Done</b>, then test it here.</li>' +
+        '</ol></details>') +
       '<p>Pausing or stopping in Aurix can\'t stop the Clock timer. Cancel it in the Clock app if you need to.</p>' +
-      '<div class="a-btns"><button type="button" data-al="test">Test: 5 seconds</button><button type="button" data-al="close">Close</button></div>' +
+      '<div class="a-btns"><button type="button" data-al="test">' + (key ? 'Test: 10 seconds' : 'Test: 5 seconds') + '</button><button type="button" data-al="close">Close</button></div>' +
     '</section>';
   }
+  root.addEventListener("submit", function (e) {
+    if (!e.target.matches('form[data-al-form="key"]')) return;
+    e.preventDefault();
+    var v = e.target.querySelector("input").value.trim();
+    try { if (v) localStorage.setItem(MAILKEY, v); else localStorage.removeItem(MAILKEY); } catch (err) {}
+    mailStatus = v ? "Saved on this device. Timers will email your iPhone." : "Removed. Timers use the Shortcut on this iPhone.";
+    mailErr = false; render();
+  }, true);
   $("bell").addEventListener("click", function () { alarmOpen = !alarmOpen; render(); if (alarmOpen) window.scrollTo({ top: 0, behavior: "smooth" }); });
   root.addEventListener("click", function (e) {
     var b = e.target.closest("button[data-al]"); if (!b) return;
@@ -387,7 +428,13 @@
     if (al === "toggle") { data.alarm = !data.alarm; save(); render(); }
     else if (al === "close") { alarmOpen = false; render(); }
     else if (al === "test") {
-      location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=5";
+      if (!mailKey()) { location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=5"; return; }
+      mailStatus = "Sending…"; mailErr = false; render();
+      sendTimerMail(10, "Test from Aurix").then(function () {
+        mailStatus = "Sent. Your iPhone should start a 10-second timer when the email arrives.";
+      }, function (err) {
+        mailStatus = "Didn't send: " + err.message; mailErr = true;
+      }).then(render);
     }
   });
 
