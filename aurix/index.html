@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aurix</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Aurix">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#e7eaec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101315" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  /* One narrow column, one day at a time. */
+  :root {
+    --bg: #e7eaec;
+    --panel: #f8f9fa;
+    --ink: #15191c;
+    --dim: #5b646b;
+    --line: #cfd5d9;
+    --field: #ffffff;
+    --signal: #f2b705;
+    --on-signal: #1a1a14;
+    --danger: #b3261e;
+    --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "Barlow", system-ui, -apple-system, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101315; --panel: #191d20; --ink: #e6e9eb; --dim: #8e989f; --line: #2c3337;
+      --field: #0d1012; --signal: #f5c518; --on-signal: #17150a; --danger: #ef6b5f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101315; --panel: #191d20; --ink: #e6e9eb; --dim: #8e989f; --line: #2c3337;
+    --field: #0d1012; --signal: #f5c518; --on-signal: #17150a; --danger: #ef6b5f;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  :root {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-text-size-adjust: 100%;
+  }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.45;
+    padding-block: 20px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .app { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 {
+    font-family: var(--display); font-weight: 700; font-size: 30px; letter-spacing: 0.02em;
+    text-transform: uppercase; margin: 0; line-height: 1;
+  }
+  .clock { font-family: var(--mono); font-size: 14px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+  /* Day picker */
+  .day { display: flex; align-items: center; gap: 10px; }
+  .day-label { flex: 1; text-align: center; }
+  .dow { font-family: var(--display); font-weight: 700; font-size: 26px; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.1; }
+  .date { font-family: var(--mono); font-size: 14px; color: var(--dim); }
+  .date b { color: var(--on-signal); background: var(--signal); border-radius: 4px; padding: 0 6px; font-weight: 700; }
+  button.nav {
+    width: 52px; height: 52px; flex: 0 0 auto; border-radius: 8px; cursor: pointer;
+    background: none; border: 2px solid var(--line); color: var(--ink); font-size: 26px; line-height: 1;
+  }
+
+  /* Add a task */
+  .add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+  .add #text { grid-column: 1 / -1; }
+  input[type=text], input[type=time] {
+    width: 100%; min-width: 0;
+    font-family: var(--body); font-size: 20px; font-weight: 500;
+    color: var(--ink); background: var(--field);
+    border: 2px solid var(--line); border-radius: 8px; padding: 12px 14px;
+  }
+  input[type=time] { font-family: var(--mono); font-size: 18px; min-height: 52px; -webkit-appearance: none; appearance: none; }
+  input:focus-visible { outline: none; border-color: var(--signal); }
+  input::placeholder { color: var(--dim); opacity: 0.6; }
+  button.primary {
+    font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: 0.06em; text-transform: uppercase;
+    border-radius: 8px; padding: 0 22px; min-height: 52px; cursor: pointer;
+    background: var(--signal); color: var(--on-signal); border: 2px solid var(--signal);
+  }
+  button.primary:disabled { opacity: 0.4; cursor: default; }
+  button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  button.link {
+    background: none; border: 0; padding: 4px 2px; cursor: pointer; align-self: center;
+    font-family: var(--body); font-size: 15px; font-weight: 600; color: var(--dim);
+  }
+
+  /* Tasks */
+  .list-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .list-head h2 {
+    font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: 0.08em;
+    text-transform: uppercase; margin: 0;
+  }
+  .count { font-size: 13px; color: var(--dim); font-family: var(--mono); }
+  ul.tasks { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  ul.tasks li { border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 4px; }
+  ul.tasks label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 4px; cursor: pointer; }
+  ul.tasks input[type=checkbox] {
+    -webkit-appearance: none; appearance: none; margin: 0; flex: 0 0 auto;
+    width: 26px; height: 26px; border: 2px solid var(--dim); border-radius: 6px; background: var(--field); cursor: pointer;
+    display: grid; place-content: center;
+  }
+  ul.tasks input[type=checkbox]:checked { background: var(--signal); border-color: var(--signal); }
+  ul.tasks input[type=checkbox]:checked::after { content: "✓"; color: var(--on-signal); font-weight: 700; font-size: 17px; line-height: 1; }
+  ul.tasks input[type=checkbox]:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .t-time { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--dim); min-width: 5.2em; font-variant-numeric: tabular-nums; }
+  .t-text { overflow-wrap: anywhere; font-size: 17px; }
+  li.done .t-text { text-decoration: line-through; color: var(--dim); }
+  button.del {
+    width: 44px; height: 44px; flex: 0 0 auto; border: 0; background: none; cursor: pointer; border-radius: 6px;
+    color: var(--dim); font-size: 22px;
+  }
+  button.del.armed { color: var(--danger); font-size: 14px; font-weight: 700; width: auto; padding: 0 8px; }
+  .empty { padding: 16px 4px; color: var(--dim); font-size: 15px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>Aurix</h1>
+    <div class="clock" id="clock">--:--</div>
+  </header>
+
+  <div class="day">
+    <button class="nav" id="prev" type="button" aria-label="Previous day">‹</button>
+    <div class="day-label" aria-live="polite">
+      <div class="dow" id="dow"></div>
+      <div class="date" id="date"></div>
+    </div>
+    <button class="nav" id="next" type="button" aria-label="Next day">›</button>
+  </div>
+  <button class="link" id="today" type="button" hidden>Back to today</button>
+
+  <form class="add" id="addform" autocomplete="off">
+    <input id="text" type="text" placeholder="Add a task" aria-label="Task" enterkeyhint="done">
+    <input id="time" type="time" aria-label="Time (optional)">
+    <button class="primary" id="addbtn" type="submit" disabled>Add</button>
+  </form>
+
+  <section>
+    <div class="list-head">
+      <h2>Plan</h2>
+      <span class="count" id="count"></span>
+    </div>
+    <ul class="tasks" id="list"></ul>
+    <div class="empty" id="empty">Nothing planned.</div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- storage ----------
+  // Tasks live in this browser's storage, by day: { "2026-10-28": [{ id, text, time, done }] }.
+  // A Home Screen app on iPhone has its own storage, separate from Safari's.
+  var KEY = "pl-tasks", all = {};
+  try { all = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { all = {}; }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(all)); return true; } catch (e) { return false; }
+  }
+  window.addEventListener("storage", function (e) {
+    if (e.key !== KEY) return;
+    try { all = JSON.parse(e.newValue || "{}") || {}; } catch (x) {}
+    render();
+  });
+
+  // ---------- days ----------
+  function dayKey(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function today() { var d = new Date(); d.setHours(12, 0, 0, 0); return d; }
+  var day = today();
+  function shiftDay(n) { day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + n, 12); render(); }
+
+  // ---------- rendering ----------
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function timeText(t) {
+    if (!t) return "";
+    var p = t.split(":"), d = new Date(2000, 0, 1, +p[0], +p[1]);
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+  // Open tasks first, timed ones in time order, then the rest as added; done tasks drop to the bottom.
+  function sorted(tasks) {
+    return tasks.slice().sort(function (a, b) {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      if (!!a.time !== !!b.time) return a.time ? -1 : 1;
+      if (a.time && a.time !== b.time) return a.time < b.time ? -1 : 1;
+      return a.id - b.id;
+    });
+  }
+
+  function render() {
+    var key = dayKey(day), isToday = key === dayKey(today());
+    var rel = Math.round((day - today()) / 86400000);
+    $("dow").textContent = day.toLocaleDateString([], { weekday: "long" });
+    $("date").innerHTML = esc(day.toLocaleDateString([], { month: "short", day: "numeric", year: day.getFullYear() === new Date().getFullYear() ? undefined : "numeric" })) +
+      (isToday ? " <b>Today</b>" : rel === 1 ? " · Tomorrow" : rel === -1 ? " · Yesterday" : "");
+    $("today").hidden = isToday;
+
+    var tasks = sorted(all[key] || []), left = tasks.filter(function (t) { return !t.done; }).length;
+    $("count").textContent = tasks.length ? (left ? left + " left" : "All done") : "";
+    $("list").innerHTML = tasks.map(function (t) {
+      return '<li' + (t.done ? ' class="done"' : '') + '><label>' +
+        '<input type="checkbox" data-done="' + t.id + '"' + (t.done ? ' checked' : '') + '>' +
+        (t.time ? '<span class="t-time">' + esc(timeText(t.time)) + '</span>' : '') +
+        '<span class="t-text">' + esc(t.text) + '</span></label>' +
+        '<button class="del" type="button" data-del="' + t.id + '" aria-label="Delete ' + esc(t.text) + '">×</button></li>';
+    }).join("");
+    $("empty").hidden = tasks.length > 0;
+  }
+
+  // ---------- actions ----------
+  // Ids are timestamps, bumped past any already used so two quick adds can't share one.
+  function nextId() {
+    var id = Date.now();
+    Object.keys(all).forEach(function (k) { all[k].forEach(function (t) { if (t.id >= id) id = t.id + 1; }); });
+    return id;
+  }
+  function find(id) {
+    var list = all[dayKey(day)] || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+  $("text").addEventListener("input", function () { $("addbtn").disabled = !$("text").value.trim(); });
+  $("addform").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var text = $("text").value.trim(); if (!text) return;
+    var key = dayKey(day);
+    (all[key] = all[key] || []).push({ id: nextId(), text: text, time: $("time").value || "", done: false });
+    save();
+    $("text").value = ""; $("time").value = ""; $("addbtn").disabled = true;
+    render();
+  });
+  $("list").addEventListener("change", function (e) {
+    var id = Number(e.target.getAttribute("data-done")), t = id && find(id); if (!t) return;
+    t.done = e.target.checked; save(); render();
+  });
+  // Delete takes a second tap so a stray tap can't lose a task.
+  var armTimer = null;
+  $("list").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-del]"); if (!b) return;
+    if (!b.classList.contains("armed")) {
+      clearTimeout(armTimer); render();
+      b = document.querySelector('button[data-del="' + b.getAttribute("data-del") + '"]');
+      b.classList.add("armed"); b.textContent = "Delete?";
+      armTimer = setTimeout(render, 3000);
+      return;
+    }
+    clearTimeout(armTimer);
+    var key = dayKey(day), id = Number(b.getAttribute("data-del"));
+    all[key] = (all[key] || []).filter(function (t) { return t.id !== id; });
+    if (!all[key].length) delete all[key];
+    save(); render();
+  });
+  $("prev").addEventListener("click", function () { shiftDay(-1); });
+  $("next").addEventListener("click", function () { shiftDay(1); });
+  $("today").addEventListener("click", function () { day = today(); render(); });
+
+  // ---------- clock ----------
+  var shownToday = dayKey(today());
+  function tick() {
+    $("clock").textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    // Past midnight while open on today: move along to the new today.
+    var now = dayKey(today());
+    if (now !== shownToday) { if (dayKey(day) === shownToday) day = today(); shownToday = now; render(); }
+  }
+  tick(); setInterval(tick, 15000);
+
+  render();
+})();
+</script>
+<script>
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
+</script>
+</body>
+</html>

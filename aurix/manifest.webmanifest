@@ -1,6 +1,6 @@
 {
-  "name": "Planner",
-  "short_name": "Planner",
+  "name": "Aurix",
+  "short_name": "Aurix",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
