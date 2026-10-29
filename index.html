@@ -765,6 +765,8 @@
     return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
   }
   function hm(ms) { return new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
+  // Time worked, to the nearest minute.
+  function took(ms) { var m = Math.round(ms / 60000), h = Math.floor(m / 60); return (h ? h + "h " : "") + (m % 60) + "m"; }
   function renderHistory() {
     $("history").hidden = !history.length;
     $("histcount").textContent = history.length ? history.length + (history.length === 1 ? " run" : " runs") : "";
