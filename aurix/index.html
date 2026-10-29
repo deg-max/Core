@@ -83,6 +83,17 @@
     flex: 1; min-height: 44px; border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px;
     font-size: 15px; font-weight: 600; cursor: pointer;
   }
+  .alarm h3 { font-size: 15px; font-weight: 600; margin: 4px 0 0; }
+  .alarm form.key { display: flex; gap: 8px; margin: 0; }
+  .alarm form.key input {
+    flex: 1; border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px; padding: 10px 12px; font-size: 15px;
+  }
+  .alarm form.key input:focus { border-color: rgba(139, 92, 246, 0.7); }
+  .alarm form.key button { flex: 0 0 auto; min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--glow); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .alarm .a-status { font-size: 13px; color: #c7bdff; }
+  .alarm .a-status.err { color: #ff8a8a; }
+  .alarm details summary { cursor: pointer; color: var(--dim); font-size: 14px; }
+  .alarm details[open] { display: flex; flex-direction: column; gap: 10px; }
   .f-note { font-size: 13px; color: var(--dim); margin: -4px 0 0; }
   h1 { font-weight: 600; font-size: 20px; letter-spacing: 0.32em; text-transform: uppercase; margin: 0; line-height: 1; }
 
