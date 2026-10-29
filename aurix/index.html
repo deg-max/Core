@@ -428,6 +428,16 @@
     mailStatus = v ? "Saved on this device. Timers will email your iPhone." : "Removed. Timers use the Shortcut on this iPhone.";
     mailErr = false; render();
   }, true);
+  // Opening Aurix with #mailkey=<key> saves the key on this device and turns the alarm on,
+  // so a device can be set up from a link instead of pasting.
+  (function () {
+    var m = /^#mailkey=([A-Za-z0-9-]+)$/.exec(location.hash);
+    if (!m) return;
+    try { localStorage.setItem(MAILKEY, m[1]); } catch (e) {}
+    data.alarm = true; save();
+    mailStatus = "Key saved on this device. Timers will email your iPhone."; mailErr = false; alarmOpen = true;
+    history.replaceState(null, "", location.pathname + location.search);
+  })();
   $("bell").addEventListener("click", function () { alarmOpen = !alarmOpen; render(); if (alarmOpen) window.scrollTo({ top: 0, behavior: "smooth" }); });
   root.addEventListener("click", function (e) {
     var b = e.target.closest("button[data-al]"); if (!b) return;
