@@ -783,12 +783,12 @@
       if (k !== lastDay) {
         var d = days[k];
         html += '<li class="day"><span>' + esc(dayLabel(r.start)) + ' · ' + d.n + (d.n === 1 ? ' part' : ' parts') + '</span>' +
-          '<span>' + shortTime(d.earned) + ' in ' + shortTime(d.worked) + ' · <b>' + Math.round(d.earned / d.worked * 100) + '%</b></span></li>';
+          '<span>' + shortTime(d.earned) + ' in ' + took(d.worked * 3600000) + ' · <b>' + Math.round(d.earned / d.worked * 100) + '%</b></span></li>';
         lastDay = k;
       }
       var pct = runPct(r), cls = r.target ? (pct >= r.target ? " hit" : " miss") : "";
       html += '<li class="run"><div class="what"><span class="pn">' + esc(r.part + stepLabel(r.step)) + '</span>' +
-        '<span class="when">' + hm(r.start) + ' – ' + hm(r.end) + ' · took ' + minutesLeftText(r.end - r.start) + ' of ' + shortTime(r.hours) + '</span></div>' +
+        '<span class="when">' + hm(r.start) + ' – ' + hm(r.end) + ' · took ' + took(r.end - r.start) + ' of ' + shortTime(r.hours) + '</span></div>' +
         '<span class="pct' + cls + '"' + (r.target ? ' title="Target ' + r.target + '%"' : '') + '>' + Math.round(pct) + '%</span>' +
         '<button class="rm" type="button" data-hist="' + i + '" aria-label="Remove this run">×</button></li>';
     });
