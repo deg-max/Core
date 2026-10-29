@@ -84,6 +84,13 @@
     font-size: 15px; font-weight: 600; cursor: pointer;
   }
   .alarm h3 { font-size: 15px; font-weight: 600; margin: 4px 0 0; }
+  .a-link {
+    flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; text-align: center;
+    border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px;
+    font-size: 15px; font-weight: 600; color: var(--ink); text-decoration: none;
+  }
+  .a-link.go { background: var(--glow); border: 0; color: #fff; box-shadow: 0 0 18px rgba(110, 90, 255, 0.45); }
+  .a-link:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
   .alarm form.key { display: flex; gap: 8px; margin: 0; }
   .alarm form.key input {
     flex: 1; border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px; padding: 10px 12px; font-size: 15px;
