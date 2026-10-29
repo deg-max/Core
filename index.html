@@ -728,12 +728,100 @@
       return;
     }
     clearTimeout(switchTimer);
-    if (!same) { job = { part: p.part, step: step, hours: step === null ? p.hours : p.steps[step], start: Date.now() }; saveJob(); }
+    if (!same) {
+      // Switching parts clocks you out of the old one.
+      if (job) endJob();
+      job = { part: p.part, step: step, hours: step === null ? p.hours : p.steps[step], start: Date.now() }; saveJob();
+    }
     renderJob(); renderList();
     if (!$("steps")) renderReadout();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   effInput.addEventListener("input", function () { renderJob(); renderList(); });
+
+  // ---------- history ----------
+  // Every clock-out, newest first: the part, its clock time, when you were in and out, and the
+  // target you had set. Efficiency run = clock time ÷ time actually taken.
+  var history = [], histAll = false, histArmTimer = null;
+  var HIST_MAX = 500, HIST_SHOWN = 20;
+  try { history = JSON.parse(localStorage.getItem("pc-history") || "[]") || []; } catch (e) { history = []; }
+  function saveHistory() {
+    try { localStorage.setItem("pc-history", JSON.stringify(history)); } catch (e) {}
+  }
+  function endJob() {
+    var end = Date.now();
+    // A clock-in undone within a minute was a stray tap, not a run.
+    if (!job || end - job.start < 60000) return;
+    var e = efficiency();
+    history.unshift({ part: job.part, step: job.step, hours: job.hours, start: job.start, end: end, target: isFinite(e) ? e : null });
+    history.length = Math.min(history.length, HIST_MAX);
+    saveHistory(); renderHistory();
+  }
+  function runPct(r) { return r.hours * 3600000 / (r.end - r.start) * 100; }
+  function dayLabel(ms) {
+    var d = new Date(ms), today = new Date(), y = new Date(); y.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Today";
+    if (d.toDateString() === y.toDateString()) return "Yesterday";
+    return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  }
+  function hm(ms) { return new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
+  function renderHistory() {
+    $("history").hidden = !history.length;
+    $("histcount").textContent = history.length ? history.length + (history.length === 1 ? " run" : " runs") : "";
+    var shown = histAll ? history : history.slice(0, HIST_SHOWN);
+    // Day totals use every run that day, even ones past the "show more" cut.
+    var days = {};
+    history.forEach(function (r) {
+      var k = new Date(r.start).toDateString(), d = days[k] || (days[k] = { n: 0, earned: 0, worked: 0 });
+      d.n++; d.earned += r.hours; d.worked += (r.end - r.start) / 3600000;
+    });
+    var html = "", lastDay = null;
+    shown.forEach(function (r, i) {
+      var k = new Date(r.start).toDateString();
+      if (k !== lastDay) {
+        var d = days[k];
+        html += '<li class="day"><span>' + esc(dayLabel(r.start)) + ' · ' + d.n + (d.n === 1 ? ' part' : ' parts') + '</span>' +
+          '<span>' + shortTime(d.earned) + ' in ' + shortTime(d.worked) + ' · <b>' + Math.round(d.earned / d.worked * 100) + '%</b></span></li>';
+        lastDay = k;
+      }
+      var pct = runPct(r), cls = r.target ? (pct >= r.target ? " hit" : " miss") : "";
+      html += '<li class="run"><div class="what"><span class="pn">' + esc(r.part + stepLabel(r.step)) + '</span>' +
+        '<span class="when">' + hm(r.start) + ' – ' + hm(r.end) + ' · took ' + minutesLeftText(r.end - r.start) + ' of ' + shortTime(r.hours) + '</span></div>' +
+        '<span class="pct' + cls + '"' + (r.target ? ' title="Target ' + r.target + '%"' : '') + '>' + Math.round(pct) + '%</span>' +
+        '<button class="rm" type="button" data-hist="' + i + '" aria-label="Remove this run">×</button></li>';
+    });
+    $("hist").innerHTML = html;
+    var more = $("histmore");
+    more.hidden = history.length <= HIST_SHOWN;
+    more.textContent = histAll ? "Show fewer" : "Show all " + history.length;
+  }
+  $("hist").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-hist]"); if (!b) return;
+    if (!b.classList.contains("armed")) {
+      [].forEach.call($("hist").querySelectorAll("button.rm.armed"), function (x) { x.classList.remove("armed"); x.textContent = "×"; });
+      b.classList.add("armed"); b.textContent = "Remove";
+      clearTimeout(histArmTimer);
+      histArmTimer = setTimeout(renderHistory, 3000);
+      return;
+    }
+    clearTimeout(histArmTimer);
+    history.splice(Number(b.getAttribute("data-hist")), 1);
+    saveHistory(); renderHistory();
+  });
+  $("histmore").addEventListener("click", function () { histAll = !histAll; renderHistory(); });
+  $("histclear").addEventListener("click", function () {
+    var btn = $("histclear");
+    if (!btn.classList.contains("armed")) {
+      btn.classList.add("armed"); btn.textContent = "Tap again to clear all";
+      clearTimeout(histArmTimer);
+      histArmTimer = setTimeout(function () { btn.classList.remove("armed"); btn.textContent = "Clear history"; }, 3000);
+      return;
+    }
+    clearTimeout(histArmTimer);
+    btn.classList.remove("armed"); btn.textContent = "Clear history";
+    history = []; histAll = false; saveHistory(); renderHistory();
+  });
+  renderHistory();
 
   // ---------- clock ----------
   function tick() {
