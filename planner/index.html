@@ -250,7 +250,7 @@
     e.preventDefault();
     var text = $("text").value.trim(); if (!text) return;
     var key = dayKey(day);
-    (all[key] = all[key] || []).push({ id: Date.now(), text: text, time: $("time").value || "", done: false });
+    (all[key] = all[key] || []).push({ id: nextId(), text: text, time: $("time").value || "", done: false });
     save();
     $("text").value = ""; $("time").value = ""; $("addbtn").disabled = true;
     render();
