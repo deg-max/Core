@@ -55,6 +55,35 @@
   header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
   /* The logo sits on black; screen blending drops the black so only the glow shows. */
   header img { width: 40px; height: 40px; display: block; mix-blend-mode: screen; }
+  .bell {
+    margin-left: auto; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: grid; place-content: center;
+    background: var(--panel); border: 1px solid var(--line); color: var(--dim);
+  }
+  .bell.on { color: #c7bdff; border-color: rgba(139, 92, 246, 0.55); box-shadow: 0 0 14px rgba(110, 90, 255, 0.3); }
+  .bell svg { display: block; }
+
+  /* Timer alarm setup */
+  .alarm { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .a-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .a-head h2 { font-size: 17px; font-weight: 600; margin: 0; }
+  .alarm p { margin: 0; color: var(--dim); font-size: 14px; }
+  .alarm ol { margin: 0; padding-left: 20px; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .alarm ol b { color: #c7bdff; font-weight: 600; }
+  .switch {
+    flex: 0 0 auto; width: 52px; height: 30px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel-2);
+    position: relative; cursor: pointer; padding: 0;
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--dim); transition: left 0.15s;
+  }
+  .switch[aria-checked="true"] { background: var(--glow); border-color: transparent; }
+  .switch[aria-checked="true"]::after { left: 25px; background: #fff; }
+  .a-btns { display: flex; gap: 8px; }
+  .a-btns button {
+    flex: 1; min-height: 44px; border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .f-note { font-size: 13px; color: var(--dim); margin: -4px 0 0; }
   h1 { font-weight: 600; font-size: 20px; letter-spacing: 0.32em; text-transform: uppercase; margin: 0; line-height: 1; }
 
   button { font-family: var(--font); color: inherit; }
@@ -167,6 +196,9 @@
   <header>
     <img src="logo.png" alt="">
     <h1>Aurix</h1>
+    <button class="bell" id="bell" type="button" aria-label="Timer alarm settings" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    </button>
   </header>
   <main id="root"></main>
 </div>
@@ -206,7 +238,7 @@
   function prio(id) { return data.priorities.filter(function (p) { return p.id === id; })[0] || null; }
 
   // ---------- view state ----------
-  var menuFor = null, renaming = null, armed = null, armTimer = null;
+  var menuFor = null, renaming = null, armed = null, armTimer = null, alarmOpen = false;
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -278,6 +310,7 @@
       '<div class="f-task">' + esc(tt.t.text) + '</div>' +
       '<div class="f-time" data-cd>' + (tm.up ? "0:00" : clockText(left)) + '</div>' +
       '<div class="f-bar"><i data-bar style="width:' + (tm.up ? 100 : pct) + '%"></i></div>' +
+      (data.alarm && !tm.up ? '<p class="f-note">' + (tm.end ? 'Also counting in the Clock app.' : 'The Clock app timer is still running. Resume to reset it.') + '</p>' : '') +
       '<div class="f-btns">' + (tm.up
         ? '<button type="button" class="go" data-act="tdone"' + id + '>Done ✓</button><button type="button" data-act="tmore"' + id + '>+5 min</button>'
         : '<button type="button" data-act="tpause"' + id + '>' + (tm.end ? "Pause" : "Resume") + '</button>' +
@@ -290,6 +323,42 @@
     if (tm && tm.t === t.id) return tm.up ? "Time's up" : (tm.end ? "" : "❚❚ ") + clockText(remaining(tm));
     return "▶ " + durText(taskMinutes(t.text));
   }
+
+  // ---------- alarm through the iPhone Clock app ----------
+  // A web app can't ring once it's closed, so with the alarm on, starting a timer also runs a
+  // Shortcut named "Aurix Timer" that starts the iPhone's own Clock timer for the same time.
+  var SHORTCUT = "Aurix Timer";
+  function ringWithClock(ms) {
+    if (!data.alarm || !(ms > 0)) return;
+    location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=" + Math.max(1, Math.round(ms / 1000));
+  }
+  function alarmHtml() {
+    return '<section class="alarm">' +
+      '<div class="a-head"><h2>Ring when time\'s up</h2>' +
+        '<button type="button" class="switch" role="switch" aria-checked="' + !!data.alarm + '" aria-label="Ring with the iPhone Clock app" data-al="toggle"></button></div>' +
+      '<p>Rings through your iPhone\'s Clock app, even when Aurix is closed or your phone is on silent. Each timer briefly opens Shortcuts; swipe back to Aurix.</p>' +
+      '<p>One-time setup:</p>' +
+      '<ol>' +
+        '<li>Open the <b>Shortcuts</b> app and tap <b>+</b>.</li>' +
+        '<li>Name it <b>Aurix Timer</b>, exactly.</li>' +
+        '<li>Add the action <b>Start Timer</b>.</li>' +
+        '<li>Tap its number and choose <b>Shortcut Input</b>. Tap the unit and choose <b>seconds</b>.</li>' +
+        '<li>Tap <b>Done</b>, then test it here.</li>' +
+      '</ol>' +
+      '<p>Pausing or stopping in Aurix can\'t stop the Clock timer. Cancel it in the Clock app if you need to.</p>' +
+      '<div class="a-btns"><button type="button" data-al="test">Test: 5 seconds</button><button type="button" data-al="close">Close</button></div>' +
+    '</section>';
+  }
+  $("bell").addEventListener("click", function () { alarmOpen = !alarmOpen; render(); if (alarmOpen) window.scrollTo({ top: 0, behavior: "smooth" }); });
+  root.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-al]"); if (!b) return;
+    var al = b.getAttribute("data-al");
+    if (al === "toggle") { data.alarm = !data.alarm; save(); render(); }
+    else if (al === "close") { alarmOpen = false; render(); }
+    else if (al === "test") {
+      location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=5";
+    }
+  });
 
   // Runs a few times a second: just the numbers, so typing elsewhere isn't disturbed.
   function tick() {
@@ -319,7 +388,9 @@
     [].forEach.call(root.querySelectorAll("input[data-keep]"), function (el) { if (el.value) keepAll[el.getAttribute("data-keep")] = el.value; });
 
     var ps = data.priorities;
-    var html = data.timer ? focusHtml() : "";
+    var html = (alarmOpen ? alarmHtml() : "") + (data.timer ? focusHtml() : "");
+    $("bell").classList.toggle("on", !!data.alarm);
+    $("bell").setAttribute("aria-expanded", alarmOpen);
     keepAwake(!!(data.timer && data.timer.end));
     if (!ps.length) {
       html += '<div class="welcome"><h2>What matters most?</h2><p>Name your top priority to start.</p></div>';
@@ -432,6 +503,7 @@
         unlockAudio();
         var total = taskMinutes(task.text) * 60000;
         data.timer = { p: p.id, t: tid, total: total, end: Date.now() + total, left: null, up: false };
+        save(); ringWithClock(total);
       }
       save();
     }
@@ -439,6 +511,7 @@
     else if (act === "tmore" && data.timer) {
       unlockAudio();
       data.timer = { p: data.timer.p, t: data.timer.t, total: 300000, end: Date.now() + 300000, left: null, up: false }; save();
+      ringWithClock(300000);
     }
     else if (act === "tstop") { data.timer = null; save(); }
     else if (act === "tdone" && data.timer) { var dt = data.timer.t; data.timer = null; completeTask(p, dt); return; }
@@ -474,7 +547,7 @@
   }
   function togglePause(tm) {
     if (tm.end) { tm.left = tm.end - Date.now(); tm.end = null; }
-    else { unlockAudio(); tm.end = Date.now() + tm.left; tm.left = null; }
+    else { unlockAudio(); tm.end = Date.now() + tm.left; tm.left = null; save(); ringWithClock(tm.end - Date.now()); }
   }
   function showToast(text) {
     $("toast-text").textContent = text; $("toast").hidden = false;
