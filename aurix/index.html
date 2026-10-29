@@ -306,6 +306,7 @@
       }
     }
     render();
+    if (act === "rename") { var r = root.querySelector('input[data-keep="rename"]'); if (r) { r.focus(); r.select(); } }
   });
 
   // Checking a task off clears it away; Undo brings it back.
