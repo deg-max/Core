@@ -53,8 +53,6 @@
   .app { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
 
   header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  /* The logo sits on black; screen blending drops the black so only the glow shows. */
-  header img { width: 40px; height: 40px; display: block; mix-blend-mode: screen; }
   .bell {
     margin-left: auto; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: grid; place-content: center;
     background: var(--panel); border: 1px solid var(--line); color: var(--dim);
@@ -102,7 +100,6 @@
   .alarm details summary { cursor: pointer; color: var(--dim); font-size: 14px; }
   .alarm details[open] { display: flex; flex-direction: column; gap: 10px; }
   .f-note { font-size: 13px; color: var(--dim); margin: -4px 0 0; }
-  h1 { font-weight: 600; font-size: 20px; letter-spacing: 0.32em; text-transform: uppercase; margin: 0; line-height: 1; }
 
   button { font-family: var(--font); color: inherit; }
   button:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
@@ -230,8 +227,6 @@
 
 <div class="app">
   <header>
-    <img src="logo.png" alt="">
-    <h1>Aurix</h1>
     <button class="bell" id="bell" type="button" aria-label="Timer alarm settings" aria-expanded="false">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
     </button>
