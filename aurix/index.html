@@ -99,9 +99,23 @@
   #root { display: flex; flex-direction: column; gap: 12px; }
 
   /* A priority: number, name, tasks inside. */
-  .prio { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; }
+  .prio { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; transition: transform 0.18s ease; }
+  /* Dragging: the picked-up card follows your finger; the others slide out of its way. */
+  .prio.dragging {
+    transition: none; z-index: 5; border-color: rgba(139, 92, 246, 0.8);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(110, 90, 255, 0.35);
+  }
+  .sorting, .sorting * { -webkit-user-select: none; user-select: none; }
+  .p-grip {
+    flex: 0 0 auto; width: 36px; height: 40px; display: grid; place-content: center; color: #5d5788;
+    cursor: grab; touch-action: none;
+  }
+  .dragging .p-grip { cursor: grabbing; color: #c7bdff; }
   .prio.top { border-color: rgba(139, 92, 246, 0.55); box-shadow: 0 0 28px rgba(110, 90, 255, 0.18); }
-  .p-head { display: flex; align-items: center; gap: 4px; padding: 6px 6px 6px 14px; }
+  .p-head {
+    display: flex; align-items: center; gap: 2px; padding: 6px 6px 6px 14px;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
   .p-title {
     flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
     background: none; border: 0; padding: 8px 0; text-align: left; cursor: pointer;
@@ -404,6 +418,8 @@
             '<span class="p-name">' + esc(p.name) + '</span>' +
             (open ? '' : '<span class="p-left">' + (n ? n + (n === 1 ? ' task' : ' tasks') : 'Clear') + '</span>') +
           '</button>' +
+          (ps.length > 1 ? '<span class="p-grip" aria-hidden="true" title="Drag to reorder">' +
+            '<svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor"><circle cx="4" cy="4" r="1.8"/><circle cx="10" cy="4" r="1.8"/><circle cx="4" cy="10" r="1.8"/><circle cx="10" cy="10" r="1.8"/><circle cx="4" cy="16" r="1.8"/><circle cx="10" cy="16" r="1.8"/></svg></span>' : '') +
           '<button class="p-more" type="button" data-act="menu" data-p="' + p.id + '" aria-label="Options for ' + esc(p.name) + '">⋯</button>' +
         '</div>';
       if (renaming === p.id) {
@@ -447,6 +463,87 @@
     var focusEl = keep && root.querySelector('input[data-keep="' + keep + '"]');
     if (focusEl) { if (keep !== "rename") focusEl.value = keepVal; focusEl.focus(); }
     if (renaming && !focusEl) { var r = root.querySelector('input[data-keep="rename"]'); if (r) { r.focus(); r.select(); } }
+  }
+
+  // ---------- drag to reorder ----------
+  // Grab a priority by its grip, or press and hold its name, then drag it up or down.
+  var drag = null, press = null, pressTimer = null, ignoreClick = false, GAP = 12;
+  root.addEventListener("pointerdown", function (e) {
+    if (drag || (e.pointerType === "mouse" && e.button !== 0)) return;
+    var grip = e.target.closest(".p-grip"), head = e.target.closest(".p-title");
+    var card = e.target.closest(".prio");
+    if (!card || (!grip && !head)) return;
+    if (grip) { e.preventDefault(); startDrag(card, e.clientY); return; }
+    // Holding still on the name picks the card up; moving first means you're scrolling.
+    press = { card: card, x: e.clientX, y: e.clientY };
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(function () { if (press) startDrag(press.card, press.y); press = null; }, 380);
+  });
+  window.addEventListener("pointermove", function (e) {
+    if (press && Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) > 8) { clearTimeout(pressTimer); press = null; }
+    if (drag) { e.preventDefault(); drag.y = e.clientY; layoutDrag(); }
+  });
+  window.addEventListener("pointerup", endPress);
+  window.addEventListener("pointercancel", endPress);
+  function endPress() { clearTimeout(pressTimer); press = null; if (drag) endDrag(); }
+  // Stop the page scrolling under your finger while a card is picked up.
+  document.addEventListener("touchmove", function (e) { if (drag) e.preventDefault(); }, { passive: false });
+  // The tap that ends a drag shouldn't also fold the card.
+  root.addEventListener("click", function (e) { if (ignoreClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+
+  function startDrag(card, y) {
+    var cards = [].slice.call(root.querySelectorAll(".prio"));
+    if (cards.length < 2) return;
+    var from = cards.indexOf(card);
+    drag = {
+      card: card, cards: cards, from: from, to: from, y: y, startY: y, startScroll: window.scrollY,
+      rects: cards.map(function (c) { var r = c.getBoundingClientRect(); return { top: r.top + window.scrollY, height: r.height }; })
+    };
+    ignoreClick = true;
+    card.classList.add("dragging"); root.classList.add("sorting");
+    if (navigator.vibrate) navigator.vibrate(12);
+    layoutDrag();
+    requestAnimationFrame(autoScroll);
+  }
+  function layoutDrag() {
+    var d = drag, me = d.rects[d.from];
+    var dy = d.y + window.scrollY - d.startY - d.startScroll;
+    d.card.style.transform = "translateY(" + dy + "px) scale(1.02)";
+    var center = me.top + me.height / 2 + dy, to = 0;
+    d.rects.forEach(function (r, i) { if (i !== d.from && r.top + r.height / 2 < center) to++; });
+    d.to = to;
+    var shift = me.height + GAP, order = [];
+    d.cards.forEach(function (c, i) {
+      if (i === d.from) return;
+      var s = 0;
+      if (d.from < to && i > d.from && i <= to) s = -shift;
+      if (d.from > to && i >= to && i < d.from) s = shift;
+      c.style.transform = s ? "translateY(" + s + "px)" : "";
+      order.push(c);
+    });
+    // Numbers follow the new order as you drag.
+    order.splice(to, 0, d.card);
+    order.forEach(function (c, i) { c.querySelector(".p-num").textContent = i + 1; c.classList.toggle("top", i === 0); });
+  }
+  function autoScroll() {
+    if (!drag) return;
+    var edge = 80, v = 0;
+    if (drag.y < edge) v = -Math.ceil((edge - drag.y) / 6);
+    else if (drag.y > window.innerHeight - edge) v = Math.ceil((drag.y - (window.innerHeight - edge)) / 6);
+    if (v) { window.scrollBy(0, v); layoutDrag(); }
+    requestAnimationFrame(autoScroll);
+  }
+  function endDrag() {
+    var d = drag; drag = null;
+    root.classList.remove("sorting");
+    d.cards.forEach(function (c) { c.style.transform = ""; c.classList.remove("dragging"); });
+    if (d.to !== d.from) {
+      var ps = data.priorities;
+      ps.splice(d.to, 0, ps.splice(d.from, 1)[0]);
+      save();
+    }
+    render();
+    setTimeout(function () { ignoreClick = false; }, 60);
   }
 
   // ---------- actions ----------
