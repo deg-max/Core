@@ -1,6 +1,6 @@
 // Network first, so a published change shows on the next open; the cached copy is only
 // used with no signal (or when the network takes longer than 3 seconds).
-const CACHE = "aurix-v14";
+const CACHE = "aurix-v15";
 const FILES = ["./", "index.html", "setup.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {

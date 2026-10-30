@@ -53,6 +53,11 @@
   .app { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
 
   header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  /* Today at a glance: the date, tasks done today and the run of days with something done. */
+  .h-info { flex: 1; min-width: 0; }
+  .h-date { font-size: 20px; font-weight: 600; line-height: 1.2; }
+  .h-stats { font-size: 13px; color: var(--dim); margin-top: 2px; }
+  .h-stats b { color: #c7bdff; font-weight: 600; }
   .bell {
     margin-left: auto; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: grid; place-content: center;
     background: var(--panel); border: 1px solid var(--line); color: var(--dim);
@@ -164,7 +169,22 @@
   ul.tasks li.running { position: relative; }
   .t-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 99px; background: var(--panel-2); overflow: hidden; pointer-events: none; }
   .t-bar i { display: block; height: 100%; background: var(--glow); box-shadow: 0 0 8px rgba(110, 90, 255, 0.8); }
-  ul.tasks label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer; }
+  ul.tasks li { flex-wrap: wrap; }
+  ul.tasks label { flex: 0 0 auto; display: flex; align-items: center; padding: 12px 4px 12px 0; cursor: pointer; }
+  /* Tapping a task's text edits it; only the circle checks it off. */
+  .t-text {
+    flex: 1; min-width: 0; padding: 12px 0; border: 0; background: none; text-align: left; cursor: text;
+    font: inherit; color: inherit; line-height: 1.45;
+  }
+  .t-edit { flex: 1; min-width: 0; margin: 0; padding: 10px 0; }
+  .t-edit input { border-bottom: 1px solid var(--violet) !important; padding-bottom: 4px; }
+  .t-tools { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 12px 36px; }
+  .t-tools button {
+    border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 6px 12px; cursor: pointer;
+    font-size: 13px; font-weight: 500; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .t-tools button:disabled { opacity: 0.35; cursor: default; }
+  .t-tools button.danger { color: var(--danger); }
 
   /* Smart timer: tasks with a time in their name get a play button. */
   .play {
@@ -227,6 +247,10 @@
 
 <div class="app">
   <header>
+    <div class="h-info"><div class="h-date" id="h-date"></div><div class="h-stats" id="h-stats"></div></div>
+    <button class="bell" id="sync" type="button" aria-label="Backup and sync" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/></svg>
+    </button>
     <button class="bell" id="bell" type="button" aria-label="Timer alarm settings" aria-expanded="false">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
     </button>
@@ -249,7 +273,8 @@
   // ---------- storage ----------
   // Everything lives in this browser's storage. A Home Screen app on iPhone has its own
   // storage, separate from Safari's.
-  // { priorities: [{ id, name, collapsed, tasks: [{ id, text }] }] } — in priority order.
+  // { priorities: [{ id, name, collapsed, tasks: [{ id, text }] }], done: { "YYYY-MM-DD": count } }
+  // — priorities in order; done counts tasks checked off per day, for the header.
   var KEY = "aurix", data = { priorities: [] };
   try { data = JSON.parse(localStorage.getItem(KEY) || "null") || data; } catch (e) {}
   if (!Array.isArray(data.priorities)) data = { priorities: [] };
@@ -270,8 +295,33 @@
   });
   function prio(id) { return data.priorities.filter(function (p) { return p.id === id; })[0] || null; }
 
+  // ---------- today ----------
+  function dayKey(d) {
+    d = d || new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function bumpDone(delta) {
+    data.done = data.done || {};
+    var k = dayKey(), n = (data.done[k] || 0) + delta;
+    if (n > 0) data.done[k] = n; else delete data.done[k];
+  }
+  // Days in a row with at least one task done, counting back from today (or yesterday, so the
+  // streak doesn't read 0 every morning before the first task).
+  function streak() {
+    var done = data.done || {}, d = new Date(), n = 0;
+    if (!done[dayKey(d)]) d.setDate(d.getDate() - 1);
+    while (done[dayKey(d)]) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  function headerHtml() {
+    $("h-date").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    var today = (data.done || {})[dayKey()] || 0, run = streak();
+    $("h-stats").innerHTML = '<b>' + today + '</b> done today' + (run > 1 ? ' · <b>' + run + '</b>-day streak' : '');
+  }
+
   // ---------- view state ----------
-  var menuFor = null, renaming = null, armed = null, armTimer = null, alarmOpen = false;
+  var menuFor = null, renaming = null, editing = null, armed = null, armTimer = null, alarmOpen = false;
+  var syncOpen = false, syncStatus = "", syncErr = false, incoming = null;
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -477,7 +527,97 @@
   }
   setInterval(tick, 250);
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible") { tick(); keepAwake(!!(data.timer && data.timer.end)); }
+    if (document.visibilityState === "visible") { tick(); headerHtml(); keepAwake(!!(data.timer && data.timer.end)); }
+  });
+
+  // ---------- backup & sync ----------
+  // Lists (priorities and the done-per-day counts) travel as a file or as a link with the data
+  // packed into its #fragment, which browsers never send to a server. Opening such a link offers
+  // to replace this device's lists. No account and no server, so it's a one-tap copy, not live sync.
+  function portable() { return { priorities: data.priorities, done: data.done || {} }; }
+  function pack(obj) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function unpack(str) {
+    var b = str.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(decodeURIComponent(escape(atob(b + "===".slice((b.length + 3) % 4)))));
+  }
+  function valid(obj) { return obj && Array.isArray(obj.priorities); }
+  function taskCount(obj) { return obj.priorities.reduce(function (n, p) { return n + (p.tasks || []).length; }, 0); }
+  function adopt(obj) {
+    data.priorities = obj.priorities; data.done = obj.done || {};
+    data.timer = null; editing = null; menuFor = null;
+    data.priorities.forEach(function (p) { lastId = Math.max(lastId, p.id); (p.tasks || []).forEach(function (t) { lastId = Math.max(lastId, t.id); }); });
+    save();
+  }
+  (function () {
+    var m = /^#data=([A-Za-z0-9_-]+)$/.exec(location.hash);
+    if (!m) return;
+    history.replaceState(null, "", location.pathname + location.search);
+    try { var obj = unpack(m[1]); if (valid(obj)) { incoming = obj; syncOpen = true; } } catch (e) {
+      syncOpen = true; syncStatus = "That link didn't contain a readable list."; syncErr = true;
+    }
+  })();
+  function syncHtml() {
+    var n = data.priorities.length, t = taskCount(portable());
+    var what = n + (n === 1 ? " priority" : " priorities") + ", " + t + (t === 1 ? " task" : " tasks");
+    if (incoming) {
+      var inN = incoming.priorities.length, inT = taskCount(incoming);
+      return '<section class="alarm"><div class="a-head"><h2>Load lists from link?</h2></div>' +
+        '<p>The link has ' + inN + (inN === 1 ? ' priority' : ' priorities') + ' and ' + inT + (inT === 1 ? ' task' : ' tasks') + '. ' +
+        'Loading replaces what\'s on this device (' + what + ').</p>' +
+        '<div class="a-btns"><button type="button" class="a-link go" data-sy="accept">Load them</button><button type="button" data-sy="reject">Keep mine</button></div></section>';
+    }
+    return '<section class="alarm"><div class="a-head"><h2>Backup &amp; sync</h2></div>' +
+      '<p>On this device: ' + what + '.</p>' +
+      '<h3>Send to another device</h3>' +
+      '<p>Makes a link with your lists inside. Open it on your phone or laptop to load them there. It replaces that device\'s lists, so send from whichever device is most up to date.</p>' +
+      '<div class="a-btns"><button type="button" class="a-link go" data-sy="send">' + (navigator.share ? 'Share link' : 'Copy link') + '</button></div>' +
+      '<h3>Backup file</h3>' +
+      '<div class="a-btns"><button type="button" data-sy="download">Download backup</button><button type="button" data-sy="restore">Restore from file</button></div>' +
+      '<input type="file" accept="application/json,.json" data-sy-file hidden>' +
+      (syncStatus ? '<p class="a-status' + (syncErr ? ' err' : '') + '">' + esc(syncStatus) + '</p>' : '') +
+      '<div class="a-btns"><button type="button" data-sy="close">Close</button></div></section>';
+  }
+  $("sync").addEventListener("click", function () {
+    syncOpen = !syncOpen; syncStatus = ""; render(); if (syncOpen) window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  root.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-sy]"); if (!b) return;
+    var sy = b.getAttribute("data-sy");
+    syncErr = false;
+    if (sy === "close") { syncOpen = false; syncStatus = ""; }
+    else if (sy === "reject") { incoming = null; syncOpen = false; }
+    else if (sy === "accept") { adopt(incoming); incoming = null; syncStatus = "Loaded. This device now has the lists from the link."; }
+    else if (sy === "send") {
+      var url = location.origin + location.pathname + "#data=" + pack(portable());
+      if (navigator.share) {
+        navigator.share({ title: "Aurix lists", url: url }).catch(function () {});
+        return;
+      }
+      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () {
+        syncStatus = "Link copied. Send it to your other device and open it there."; render();
+      }, function () { syncStatus = "Couldn't copy the link here. Use Download backup instead."; syncErr = true; render(); });
+      return;
+    }
+    else if (sy === "download") {
+      var blob = new Blob([JSON.stringify(portable(), null, 2)], { type: "application/json" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = "aurix-backup-" + dayKey() + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      syncStatus = "Backup downloaded.";
+    }
+    else if (sy === "restore") { root.querySelector("[data-sy-file]").click(); return; }
+    render();
+  });
+  root.addEventListener("change", function (e) {
+    if (!e.target.matches("[data-sy-file]") || !e.target.files[0]) return;
+    e.target.files[0].text().then(function (txt) {
+      var obj = JSON.parse(txt);
+      if (!valid(obj)) throw new Error("bad");
+      incoming = obj; syncStatus = "";
+    }).catch(function () { syncStatus = "That file isn't an Aurix backup."; syncErr = true; }).then(render);
   });
 
   // ---------- rendering ----------
@@ -489,7 +629,10 @@
     [].forEach.call(root.querySelectorAll("input[data-keep]"), function (el) { if (el.value) keepAll[el.getAttribute("data-keep")] = el.value; });
 
     var ps = data.priorities;
-    var html = (alarmOpen ? alarmHtml() : "") + (data.timer ? focusHtml() : "");
+    var html = (syncOpen ? syncHtml() : "") + (alarmOpen ? alarmHtml() : "") + (data.timer ? focusHtml() : "");
+    $("sync").classList.toggle("on", syncOpen);
+    $("sync").setAttribute("aria-expanded", syncOpen);
+    headerHtml();
     $("bell").classList.toggle("on", !!data.alarm);
     $("bell").setAttribute("aria-expanded", alarmOpen);
     keepAwake(!!(data.timer && data.timer.end));
@@ -523,10 +666,24 @@
         '</div>';
       }
       if (open) {
-        out += '<ul class="tasks">' + p.tasks.map(function (t) {
+        out += '<ul class="tasks">' + p.tasks.map(function (t, ti) {
           var timed = taskMinutes(t.text) > 0, on = data.timer && data.timer.t === t.id;
-          return '<li' + (on ? ' class="running"' : '') + '><label><input type="checkbox" data-p="' + p.id + '" data-t="' + t.id + '">' +
-            '<span class="t-text">' + esc(t.text) + '</span></label>' +
+          var ids = ' data-p="' + p.id + '" data-t="' + t.id + '"';
+          if (editing === t.id) {
+            // Editing: fix the text, move it, send it to another priority, or delete it.
+            return '<li><label><input type="checkbox"' + ids + ' aria-label="Done"></label>' +
+              '<form class="t-edit" data-form="tedit"' + ids + '><input type="text" data-keep="tedit" value="' + esc(t.text) + '" aria-label="Task" enterkeyhint="done" autocomplete="off"></form>' +
+              '<div class="t-tools">' +
+                '<button type="button" data-act="tup"' + ids + (ti === 0 ? ' disabled' : '') + '>Move up</button>' +
+                '<button type="button" data-act="tdown"' + ids + (ti === p.tasks.length - 1 ? ' disabled' : '') + '>Move down</button>' +
+                ps.filter(function (o) { return o.id !== p.id; }).map(function (o) {
+                  return '<button type="button" data-act="tmove" data-to="' + o.id + '"' + ids + '>→ ' + esc(o.name) + '</button>';
+                }).join("") +
+                '<button type="button" class="danger" data-act="tdel"' + ids + '>Delete</button>' +
+              '</div></li>';
+          }
+          return '<li' + (on ? ' class="running"' : '') + '><label><input type="checkbox"' + ids + ' aria-label="Done: ' + esc(t.text) + '"></label>' +
+            '<button type="button" class="t-text" data-act="tedit"' + ids + ' aria-label="Edit ' + esc(t.text) + '">' + esc(t.text) + '</button>' +
             (timed ? '<button type="button" class="play' + (on ? ' on' : '') + '" data-act="play" data-p="' + p.id + '" data-t="' + t.id + '"' +
               ' aria-label="' + (on ? 'Pause or resume timer' : 'Start ' + durText(taskMinutes(t.text)) + ' timer') + '">' + esc(playLabel(p, t)) + '</button>' : '') +
             (on ? '<span class="t-bar" aria-hidden="true"><i data-rowbar style="width:' + timerPct() + '%"></i></span>' : '') +
@@ -551,6 +708,10 @@
     var focusEl = keep && root.querySelector('input[data-keep="' + keep + '"]');
     if (focusEl) { if (keep !== "rename") focusEl.value = keepVal; focusEl.focus(); }
     if (renaming && !focusEl) { var r = root.querySelector('input[data-keep="rename"]'); if (r) { r.focus(); r.select(); } }
+    if (editing && !focusEl) {
+      var te = root.querySelector('input[data-keep="tedit"]');
+      if (te) { te.focus(); te.setSelectionRange(te.value.length, te.value.length); } else editing = null;
+    }
   }
 
   // ---------- drag to reorder ----------
@@ -650,6 +811,9 @@
       var last = data.priorities[data.priorities.length - 1];
       var t = root.querySelector('input[data-keep="task-' + last.id + '"]'); if (t) t.focus();
       return;
+    } else if (kind === "tedit" && p) {
+      saveEdit(p, Number(f.getAttribute("data-t")), text);
+      input.blur();
     } else if (kind === "rename" && p) {
       if (text) p.name = text;
       renaming = null; menuFor = null;
@@ -659,6 +823,15 @@
   });
 
   root.addEventListener("focusout", function (e) {
+    // Leaving the task box keeps the new text, unless focus went to one of its own buttons.
+    if (e.target.getAttribute("data-keep") === "tedit" && editing) {
+      var li = e.target.closest("li");
+      if (e.relatedTarget && li && li.contains(e.relatedTarget)) return;
+      var tp = prio(Number(e.target.closest("form").getAttribute("data-p")));
+      if (tp) saveEdit(tp, editing, e.target.value.trim());
+      setTimeout(render, 0);
+      return;
+    }
     // Leaving the rename box keeps the new name.
     if (e.target.getAttribute("data-keep") === "rename" && renaming) {
       var p = prio(renaming), text = e.target.value.trim();
@@ -668,11 +841,40 @@
     }
   });
 
+  // An emptied task is deleted (with Undo); otherwise the new text is kept.
+  function saveEdit(p, tid, text) {
+    var t = p.tasks.filter(function (x) { return x.id === tid; })[0];
+    editing = null;
+    if (!t) return;
+    if (text) { t.text = text; save(); } else removeTask(p, tid, false);
+  }
+  root.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && e.target.getAttribute("data-keep") === "tedit") { editing = null; render(); }
+  });
+
   root.addEventListener("click", function (e) {
     var b = e.target.closest("button[data-act]"); if (!b) return;
     var act = b.getAttribute("data-act"), id = Number(b.getAttribute("data-p")), p = prio(id);
     var ps = data.priorities, i = ps.indexOf(p);
     if (!p) return;
+    var tid0 = Number(b.getAttribute("data-t")), ti = p.tasks.findIndex(function (x) { return x.id === tid0; });
+    if (act === "tedit") { editing = tid0; menuFor = null; renaming = null; render(); return; }
+    if (act === "tup" || act === "tdown" || act === "tmove" || act === "tdel") {
+      // Keep any half-typed edit before acting on the task.
+      var ti2 = root.querySelector('input[data-keep="tedit"]');
+      if (ti2 && ti2.value.trim() && ti >= 0) p.tasks[ti].text = ti2.value.trim();
+      if (act === "tup" && ti > 0) p.tasks.splice(ti - 1, 0, p.tasks.splice(ti, 1)[0]);
+      else if (act === "tdown" && ti >= 0 && ti < p.tasks.length - 1) p.tasks.splice(ti + 1, 0, p.tasks.splice(ti, 1)[0]);
+      else if (act === "tmove" && ti >= 0) {
+        var to = prio(Number(b.getAttribute("data-to")));
+        if (to) {
+          to.tasks.push(p.tasks.splice(ti, 1)[0]); to.collapsed = false; editing = null;
+          if (data.timer && data.timer.t === tid0) data.timer.p = to.id;
+        }
+      }
+      else if (act === "tdel") { editing = null; removeTask(p, tid0, false); return; }
+      save(); render(); return;
+    }
     if (act !== "delete") { armed = null; clearTimeout(armTimer); }
     if (act === "fold") { p.collapsed = !p.collapsed; save(); }
     else if (act === "menu") { menuFor = menuFor === id ? null : id; renaming = null; }
@@ -724,11 +926,15 @@
     if (data.timer && data.timer.t === tid) data.timer = null;
     setTimeout(function () { completeTask(p, tid); }, 450);
   });
-  function completeTask(p, tid) {
+  function completeTask(p, tid) { removeTask(p, tid, true); }
+  // done: checked off (counts toward today); otherwise deleted. Either way Undo brings it back.
+  function removeTask(p, tid, done) {
     var i = p.tasks.findIndex(function (t) { return t.id === tid; }); if (i < 0) return;
     var t = p.tasks.splice(i, 1)[0];
-    lastDone = { kind: "task", item: t, prio: p.id, index: i };
-    save(); render(); showToast("Done: " + t.text);
+    if (data.timer && data.timer.t === tid) data.timer = null;
+    if (done) bumpDone(1);
+    lastDone = { kind: "task", item: t, prio: p.id, index: i, counted: done };
+    save(); render(); showToast((done ? "Done: " : "Deleted: ") + t.text);
   }
   function togglePause(tm) {
     if (tm.end) { tm.left = tm.end - Date.now(); tm.end = null; }
@@ -740,7 +946,10 @@
   }
   $("undo").addEventListener("click", function () {
     var d = lastDone; if (!d) return;
-    if (d.kind === "task") { var p = prio(d.prio); if (p) p.tasks.splice(Math.min(d.index, p.tasks.length), 0, d.item); }
+    if (d.kind === "task") {
+      var p = prio(d.prio); if (p) p.tasks.splice(Math.min(d.index, p.tasks.length), 0, d.item);
+      if (d.counted) bumpDone(-1);
+    }
     else data.priorities.splice(Math.min(d.index, data.priorities.length), 0, d.item);
     lastDone = null; clearTimeout(toastTimer); $("toast").hidden = true;
     save(); render();
