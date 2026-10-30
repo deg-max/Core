@@ -192,6 +192,16 @@
     font-size: 13px; font-weight: 600; color: #b9b0ff; font-variant-numeric: tabular-nums; cursor: pointer;
   }
   .play.on { background: var(--glow); color: #fff; border-color: transparent; box-shadow: 0 0 12px rgba(110, 90, 255, 0.5); }
+  /* The one thing to do now: first task of the highest priority that has any. */
+  .next {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .next .f-task { margin-top: -4px; font-size: 19px; }
+  .n-from { font-size: 13px; color: var(--dim); margin-top: -6px; }
+  .next.clear { text-align: center; padding: 22px 16px; }
+  .next.clear .f-task { font-size: 18px; }
+  .next.clear p { margin: 0; color: var(--dim); font-size: 14px; }
   .focus {
     background: var(--panel); border: 1px solid rgba(139, 92, 246, 0.55); border-radius: 18px; padding: 16px;
     box-shadow: 0 0 28px rgba(110, 90, 255, 0.22); display: flex; flex-direction: column; gap: 12px;
@@ -313,15 +323,27 @@
     while (done[dayKey(d)]) { n++; d.setDate(d.getDate() - 1); }
     return n;
   }
+  function greeting() {
+    var h = new Date().getHours();
+    return h < 5 ? "Still up?" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  }
   function headerHtml() {
-    $("h-date").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    $("h-date").textContent = greeting();
     var today = (data.done || {})[dayKey()] || 0, run = streak();
-    $("h-stats").innerHTML = '<b>' + today + '</b> done today' + (run > 1 ? ' · <b>' + run + '</b>-day streak' : '');
+    $("h-stats").innerHTML = esc(new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })) +
+      (today ? ' · <b>' + today + '</b> done' : '') + (run > 1 ? ' · <b>' + run + '</b>-day streak' : '');
+  }
+  // A short, varied note after each task, so finishing something feels like something.
+  var CHEERS = ["Nice.", "Done and dusted.", "One less thing.", "Keep it rolling.", "That's progress.", "Good work."];
+  function cheer() {
+    var n = (data.done || {})[dayKey()] || 0;
+    return CHEERS[n % CHEERS.length] + " " + n + " done today.";
   }
 
   // ---------- view state ----------
   var menuFor = null, renaming = null, editing = null, armed = null, armTimer = null, alarmOpen = false;
   var syncOpen = false, syncStatus = "", syncErr = false, incoming = null;
+  var skipped = 0; // how many times "Skip" was tapped on the Next step card this visit
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -620,6 +642,30 @@
     }).catch(function () { syncStatus = "That file isn't an Aurix backup."; syncErr = true; }).then(render);
   });
 
+  // ---------- next step ----------
+  function queue() {
+    var out = [];
+    data.priorities.forEach(function (p) { p.tasks.forEach(function (t) { out.push({ p: p, t: t }); }); });
+    return out;
+  }
+  function nextHtml() {
+    var q = queue();
+    if (!data.priorities.length) return "";
+    if (!q.length) {
+      return '<section class="next clear"><div class="f-task">All clear ✓</div>' +
+        '<p>Nothing waiting. Enjoy it, or add the next small step for one of your priorities.</p></section>';
+    }
+    var it = q[skipped % q.length], mins = taskMinutes(it.t.text), ids = ' data-p="' + it.p.id + '" data-t="' + it.t.id + '"';
+    return '<section class="next"><div class="f-label">Next step</div>' +
+      '<div class="f-task">' + esc(it.t.text) + '</div>' +
+      '<div class="n-from">' + esc(it.p.name) + '</div>' +
+      '<div class="f-btns">' +
+        '<button type="button" class="go" data-act="ndone"' + ids + '>Done ✓</button>' +
+        '<button type="button" data-act="nfocus"' + ids + '>▶ ' + (mins ? durText(mins) : 'Focus') + '</button>' +
+        (q.length > 1 ? '<button type="button" data-act="nskip"' + ids + '>Skip</button>' : '') +
+      '</div></section>';
+  }
+
   // ---------- rendering ----------
   function render() {
     // Keep whatever is being typed (and the cursor) across a redraw.
@@ -629,7 +675,7 @@
     [].forEach.call(root.querySelectorAll("input[data-keep]"), function (el) { if (el.value) keepAll[el.getAttribute("data-keep")] = el.value; });
 
     var ps = data.priorities;
-    var html = (syncOpen ? syncHtml() : "") + (alarmOpen ? alarmHtml() : "") + (data.timer ? focusHtml() : "");
+    var html = (syncOpen ? syncHtml() : "") + (alarmOpen ? alarmHtml() : "") + (data.timer ? focusHtml() : nextHtml());
     $("sync").classList.toggle("on", syncOpen);
     $("sync").setAttribute("aria-expanded", syncOpen);
     headerHtml();
@@ -637,7 +683,7 @@
     $("bell").setAttribute("aria-expanded", alarmOpen);
     keepAwake(!!(data.timer && data.timer.end));
     if (!ps.length) {
-      html += '<div class="welcome"><h2>What matters most?</h2><p>Name your top priority to start.</p></div>';
+      html += '<div class="welcome"><h2>What matters most right now?</h2><p>Name one priority, then break it into small next steps.</p></div>';
     }
     html += ps.map(function (p, i) {
       var n = p.tasks.length, open = !p.collapsed;
@@ -691,7 +737,7 @@
         }).join("") + '</ul>' +
         '<form class="adder" data-form="task" data-p="' + p.id + '">' +
           '<span class="plus" aria-hidden="true">+</span>' +
-          '<input type="text" data-keep="task-' + p.id + '" placeholder="Add a task" aria-label="Add a task to ' + esc(p.name) + '" enterkeyhint="done" autocomplete="off">' +
+          '<input type="text" data-keep="task-' + p.id + '" placeholder="Add a next step" aria-label="Add a next step to ' + esc(p.name) + '" enterkeyhint="done" autocomplete="off">' +
           '<button type="submit">Add</button></form>';
       }
       return out + '</section>';
@@ -859,6 +905,15 @@
     if (!p) return;
     var tid0 = Number(b.getAttribute("data-t")), ti = p.tasks.findIndex(function (x) { return x.id === tid0; });
     if (act === "tedit") { editing = tid0; menuFor = null; renaming = null; render(); return; }
+    if (act === "nskip") { skipped++; render(); return; }
+    if (act === "ndone") { skipped = 0; completeTask(p, tid0); return; }
+    if (act === "nfocus" && ti >= 0) {
+      // A timed task runs for its own length; anything else gets a 25-minute focus block.
+      unlockAudio();
+      var ftotal = (taskMinutes(p.tasks[ti].text) || 25) * 60000;
+      data.timer = { p: p.id, t: tid0, total: ftotal, end: Date.now() + ftotal, left: null, up: false };
+      save(); ringWithClock(ftotal); render(); return;
+    }
     if (act === "tup" || act === "tdown" || act === "tmove" || act === "tdel") {
       // Keep any half-typed edit before acting on the task.
       var ti2 = root.querySelector('input[data-keep="tedit"]');
@@ -934,7 +989,7 @@
     if (data.timer && data.timer.t === tid) data.timer = null;
     if (done) bumpDone(1);
     lastDone = { kind: "task", item: t, prio: p.id, index: i, counted: done };
-    save(); render(); showToast((done ? "Done: " : "Deleted: ") + t.text);
+    save(); render(); showToast(done ? cheer() : "Deleted: " + t.text);
   }
   function togglePause(tm) {
     if (tm.end) { tm.left = tm.end - Date.now(); tm.end = null; }
