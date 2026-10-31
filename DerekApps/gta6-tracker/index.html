@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GTA VI 100%</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="GTA VI 100%">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#12062a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600&display=swap">
+<style>
+  /* GTA VI 100% Tracker: the countdown page's Vice City sunset, as a phone checklist. */
+  :root {
+    --night: #12062a;
+    --ink: #fff7f0;
+    --dim: rgba(255, 240, 230, 0.66);
+    --pink: #ff3d8b;
+    --amber: #ffb347;
+    --card: rgba(255, 255, 255, 0.06);
+    --card-2: rgba(255, 255, 255, 0.1);
+    --edge: rgba(255, 255, 255, 0.12);
+    --sunset: linear-gradient(90deg, #ff3d8b, #ff6a3d 60%, #ffb347);
+    --num: "Oswald", "Arial Narrow", system-ui, sans-serif;
+    --text: "Inter", system-ui, -apple-system, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--ink); font: 16px/1.4 var(--text);
+    background: radial-gradient(130% 55% at 50% -12%, rgba(255, 61, 139, 0.35), transparent 60%),
+                radial-gradient(90% 40% at 100% 0%, rgba(255, 179, 71, 0.18), transparent 60%), var(--night);
+    background-attachment: fixed;
+    padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 110px max(16px, env(safe-area-inset-left));
+  }
+  .app { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  /* Overall progress */
+  .hero { text-align: center; padding: 8px 0 4px; }
+  .kicker { font: 700 13px var(--num); letter-spacing: .3em; text-transform: uppercase; color: var(--dim); }
+  .pct { font: 700 76px/1 var(--num); letter-spacing: -0.02em; margin: 6px 0 2px;
+    background: linear-gradient(180deg, #fff 10%, #ffd0e4 45%, #ff7aa8 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .pct small { font-size: 34px; }
+  .bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--sunset); border-radius: 99px; transition: width .4s ease; }
+  .hero .bar { margin: 12px auto 8px; max-width: 360px; height: 10px; }
+  .sub { color: var(--dim); font-size: 14px; }
+
+  .notice { background: rgba(255, 179, 71, 0.12); border: 1px solid rgba(255, 179, 71, 0.35); border-radius: 16px; padding: 12px 14px; font-size: 14px; color: #ffe2b8; }
+
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 18px; }
+  .note { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .label { font: 700 12px var(--num); letter-spacing: .2em; text-transform: uppercase; color: var(--amber); }
+  .note textarea { width: 100%; min-height: 54px; resize: vertical; border: 0; border-radius: 12px; padding: 10px 12px; background: rgba(0, 0, 0, 0.25); font-size: 16px; }
+  .note .when { font-size: 12px; color: var(--dim); }
+
+  /* Filters */
+  .tools { display: flex; flex-direction: column; gap: 10px; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .chip { flex: 0 0 auto; border: 1px solid var(--edge); background: var(--card); border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 600; }
+  .chip.on { background: var(--sunset); border-color: transparent; color: #1a0610; }
+  .search { width: 100%; border: 1px solid var(--edge); background: var(--card); border-radius: 14px; padding: 11px 14px; font-size: 16px; }
+  .search::placeholder { color: var(--dim); }
+
+  /* Categories */
+  .cat { overflow: hidden; }
+  .cat-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px; background: none; border: 0; text-align: left; }
+  .cat-name { flex: 1; min-width: 0; font-weight: 600; font-size: 17px; }
+  .cat-name .bar { margin-top: 8px; height: 6px; }
+  .cat-count { font: 600 18px var(--num); color: var(--dim); white-space: nowrap; }
+  .cat-count.full { color: var(--amber); }
+  .chev { color: var(--dim); transition: transform .2s; }
+  .cat.open .chev { transform: rotate(90deg); }
+  .cat-body { border-top: 1px solid var(--edge); }
+  .empty { padding: 14px; color: var(--dim); font-size: 14px; }
+
+  .item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .item:first-child { border-top: 0; }
+  .group { padding: 12px 14px 4px; font: 700 12px var(--num); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+  .check { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); background: none; padding: 0; display: grid; place-content: center; }
+  .item.done .check { background: var(--sunset); border-color: transparent; }
+  .item.done .check::after { content: "✓"; color: #1a0610; font-weight: 700; font-size: 15px; }
+  .item-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .item.done .item-text { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.3); }
+  .hidden-name { color: var(--dim); font-style: italic; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
+  .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+  .tag.missable { background: rgba(255, 61, 139, 0.2); color: #ff9cc3; }
+  .tag.optional { background: rgba(255, 255, 255, 0.1); color: var(--dim); }
+  .tag.mine { background: rgba(255, 179, 71, 0.16); color: #ffd39a; }
+  .item-note { font-size: 13px; color: var(--dim); margin-top: 2px; }
+  .remove { flex: 0 0 auto; border: 0; background: none; color: var(--dim); font-size: 18px; padding: 4px 6px; }
+
+  .adder { display: flex; gap: 8px; padding: 10px 14px 14px; }
+  .adder input { flex: 1; min-width: 0; border: 1px solid var(--edge); background: rgba(0, 0, 0, 0.2); border-radius: 12px; padding: 9px 12px; font-size: 16px; }
+  .adder button, .btn { border: 0; border-radius: 12px; padding: 9px 14px; font-weight: 600; background: var(--card-2); }
+  .btn.go { background: var(--sunset); color: #1a0610; }
+
+  /* Counters */
+  .counter { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 16px 14px; }
+  .step { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--edge); background: var(--card-2); font: 700 26px var(--num); }
+  .tally { text-align: center; min-width: 120px; }
+  .tally b { font: 700 40px/1 var(--num); }
+  .tally .of { display: block; margin-top: 4px; color: var(--dim); font-size: 14px; }
+  .tally input { width: 70px; text-align: center; border: 1px solid var(--edge); background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 2px 4px; font-size: 16px; }
+
+  /* Settings */
+  .settings { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .row p { margin: 2px 0 0; font-size: 13px; color: var(--dim); }
+  .switch { flex: 0 0 auto; width: 52px; height: 30px; border-radius: 99px; border: 0; background: rgba(255, 255, 255, 0.18); position: relative; padding: 0; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .switch[aria-checked="true"] { background: var(--sunset); }
+  .switch[aria-checked="true"]::after { left: 25px; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btns .btn { flex: 1; min-height: 42px; }
+  .status { font-size: 13px; color: #ffd39a; }
+  .status.err { color: #ff9cc3; }
+  .sources { font-size: 12px; color: var(--dim); }
+  .sources a { color: #ffd39a; }
+
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: min(488px, calc(100% - 32px));
+    display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 16px; background: #2a0f45; border: 1px solid var(--edge); border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+  .toast span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="hero">
+    <div class="kicker">GTA VI · 100% tracker</div>
+    <div class="pct" id="pct">0<small>%</small></div>
+    <div class="bar"><i id="pctBar"></i></div>
+    <div class="sub" id="pctSub"></div>
+  </section>
+  <div class="notice" id="notice" hidden></div>
+
+  <section class="card note">
+    <div class="label">Where I left off</div>
+    <textarea id="leftOff" placeholder="e.g. Heading to the marina for the next job" aria-label="Where I left off"></textarea>
+    <div class="when" id="lastPlayed"></div>
+  </section>
+
+  <section class="tools">
+    <div class="chips" role="group" aria-label="Show">
+      <button class="chip on" data-filter="all" type="button">All</button>
+      <button class="chip" data-filter="left" type="button">Left to do</button>
+      <button class="chip" data-filter="missable" type="button">Missable</button>
+      <button class="chip" data-filter="done" type="button">Done</button>
+    </div>
+    <input class="search" id="search" type="search" placeholder="Search" aria-label="Search" autocomplete="off">
+  </section>
+
+  <main id="cats" style="display:flex;flex-direction:column;gap:12px"></main>
+
+  <section class="card settings">
+    <div class="label">Settings</div>
+    <div class="row">
+      <div><b>Spoiler-free</b><p>Hide names of things you haven't done yet.</p></div>
+      <button class="switch" id="spoilers" type="button" role="switch" aria-checked="false" aria-label="Spoiler-free"></button>
+    </div>
+    <div class="row" style="align-items:stretch;flex-direction:column">
+      <div><b>New list</b><p>Track anything else: outfits, tattoos, side hustles…</p></div>
+      <form class="adder" id="newCat" style="padding:0">
+        <input id="newCatName" placeholder="List name" aria-label="New list name" autocomplete="off">
+        <button type="submit">Add</button>
+      </form>
+    </div>
+    <div>
+      <b>Backup &amp; sync</b>
+      <p class="sub" style="margin:2px 0 10px">Send your progress to another device as a link, or keep a backup file. Nothing is uploaded anywhere.</p>
+      <div class="btns">
+        <button class="btn go" id="share" type="button">Share link</button>
+        <button class="btn" id="download" type="button">Download backup</button>
+        <button class="btn" id="restore" type="button">Restore</button>
+      </div>
+      <input type="file" id="file" accept="application/json,.json" hidden>
+      <div class="status" id="syncStatus"></div>
+    </div>
+    <div class="sources" id="sources"></div>
+  </section>
+</div>
+
+<div class="toast" id="toast" hidden><span id="toastText"></span><button class="btn" id="undo" type="button">Undo</button></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const KEY = "gta6tracker";
+
+  // The official lists come from data.json (filled in after release from reliable sources).
+  // Your progress lives on this device: what's done, counter values, your own items and lists.
+  let official = { status: "pre-release", categories: [], sources: [] };
+  let state = { done: {}, counts: {}, totals: {}, custom: {}, userCats: [], open: {}, note: "", lastPlayed: 0, spoilerFree: false };
+  try { state = Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+  let filter = "all", query = "", lastUndo = null, toastTimer = null;
+
+  function save(touch) {
+    if (touch) state.lastPlayed = Date.now();
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function uid(prefix) { return prefix + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function categories() {
+    return official.categories.concat(state.userCats).map((cat) => {
+      const items = (cat.items || []).concat(state.custom[cat.id] || []);
+      return Object.assign({}, cat, { items });
+    });
+  }
+  // Optional items don't count toward 100%, matching how the in-game completion works.
+  function progress(cat) {
+    if (cat.kind === "count") {
+      const total = cat.total || state.totals[cat.id] || 0;
+      return { done: Math.min(state.counts[cat.id] || 0, total || Infinity), total, known: total > 0 };
+    }
+    const counted = cat.items.filter((it) => !it.optional);
+    const done = counted.filter((it) => state.done[it.id]).length;
+    return { done, total: counted.length, known: counted.length > 0 };
+  }
+  function overall(cats) {
+    // Each list with a known size weighs the same, so one huge collection can't swamp the rest.
+    const known = cats.map(progress).filter((p) => p.known);
+    if (!known.length) return { pct: 0, done: 0, total: 0 };
+    const pct = known.reduce((sum, p) => sum + p.done / p.total, 0) / known.length * 100;
+    return { pct, done: known.reduce((s, p) => s + p.done, 0), total: known.reduce((s, p) => s + p.total, 0) };
+  }
+
+  function el(tag, cls, text) {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+  function visible(cat, it) {
+    if (filter === "left" && state.done[it.id]) return false;
+    if (filter === "done" && !state.done[it.id]) return false;
+    if (filter === "missable" && !it.missable) return false;
+    if (query && !(it.name + " " + (it.group || "") + " " + cat.name).toLowerCase().includes(query)) return false;
+    return true;
+  }
+
+  function render() {
+    const cats = categories();
+    const all = overall(cats);
+    $("pct").firstChild.nodeValue = Math.floor(all.pct);
+    $("pctBar").style.width = all.pct + "%";
+    $("pctSub").textContent = all.total ? all.done + " of " + all.total + " done" : "Nothing to track yet";
+    $("notice").hidden = official.status !== "pre-release";
+    $("notice").textContent = official.message || "";
+    if (document.activeElement !== $("leftOff")) $("leftOff").value = state.note || "";
+    $("lastPlayed").textContent = state.lastPlayed ? "Last updated " + new Date(state.lastPlayed).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+    $("spoilers").setAttribute("aria-checked", state.spoilerFree);
+
+    const wrap = $("cats");
+    wrap.replaceChildren();
+    for (const cat of cats) {
+      const p = progress(cat);
+      const shown = cat.kind === "list" ? cat.items.filter((it) => visible(cat, it)) : [];
+      if ((query || filter !== "all") && cat.kind === "list" && !shown.length) continue;
+      if ((query || filter === "missable" || filter === "done") && cat.kind === "count") continue;
+
+      const card = el("section", "card cat" + (state.open[cat.id] || query ? " open" : ""));
+      const head = el("button", "cat-head");
+      head.type = "button";
+      head.setAttribute("aria-expanded", !!(state.open[cat.id] || query));
+      const name = el("div", "cat-name", cat.name);
+      const bar = el("div", "bar"); const fill = el("i"); fill.style.width = (p.known ? p.done / p.total * 100 : 0) + "%"; bar.appendChild(fill); name.appendChild(bar);
+      const count = el("div", "cat-count" + (p.known && p.done >= p.total ? " full" : ""), p.known ? p.done + "/" + p.total : (cat.kind === "count" ? (state.counts[cat.id] || 0) + "/?" : "—"));
+      head.append(name, count, el("span", "chev", "›"));
+      head.addEventListener("click", () => { state.open[cat.id] = !state.open[cat.id]; save(); render(); });
+      card.appendChild(head);
+
+      if (state.open[cat.id] || query) {
+        const body = el("div", "cat-body");
+        if (cat.kind === "count") body.appendChild(counterView(cat));
+        else body.append(...listView(cat, shown));
+        if (cat.user) {
+          const del = el("button", "btn", "Delete this list"); del.type = "button"; del.style.margin = "0 14px 14px";
+          del.addEventListener("click", () => {
+            if (!confirm("Delete the list “" + cat.name + "” and everything in it?")) return;
+            state.userCats = state.userCats.filter((c) => c.id !== cat.id); delete state.custom[cat.id]; save(true); render();
+          });
+          body.appendChild(del);
+        }
+        card.appendChild(body);
+      }
+      wrap.appendChild(card);
+    }
+    if (!wrap.children.length) wrap.appendChild(el("div", "empty", "Nothing matches."));
+
+    const src = official.sources || [];
+    $("sources").replaceChildren();
+    if (src.length) {
+      $("sources").append("Official lists from: ");
+      src.forEach((s, i) => {
+        const a = el("a", null, s.name || s.url); a.href = s.url; a.target = "_blank"; a.rel = "noopener";
+        $("sources").append(a, i < src.length - 1 ? ", " : "");
+      });
+      if (official.updated) $("sources").append(" · updated " + official.updated);
+    }
+  }
+
+  function listView(cat, shown) {
+    const nodes = [];
+    if (!cat.items.length) nodes.push(el("div", "empty", official.status === "pre-release" && !cat.user ? "Fills in after release. Add your own below." : "Nothing here yet. Add something below."));
+    let group = null;
+    for (const it of shown) {
+      if (it.group && it.group !== group) { group = it.group; nodes.push(el("div", "group", group)); }
+      const done = !!state.done[it.id];
+      const row = el("div", "item" + (done ? " done" : ""));
+      const check = el("button", "check"); check.type = "button";
+      check.setAttribute("aria-label", (done ? "Mark not done: " : "Mark done: ") + it.name);
+      check.addEventListener("click", () => toggle(it));
+      const text = el("div", "item-text");
+      if (state.spoilerFree && !done && !it.mine) {
+        const hidden = el("span", "hidden-name", "Hidden — tap to reveal");
+        hidden.addEventListener("click", () => { hidden.textContent = it.name; hidden.classList.remove("hidden-name"); });
+        text.appendChild(hidden);
+      } else {
+        text.appendChild(document.createTextNode(it.name));
+      }
+      const tags = el("div", "tags");
+      if (it.missable) tags.appendChild(el("span", "tag missable", "Missable"));
+      if (it.optional) tags.appendChild(el("span", "tag optional", "Not needed for 100%"));
+      if (it.mine) tags.appendChild(el("span", "tag mine", "Added by you"));
+      if (tags.children.length) text.appendChild(tags);
+      if (it.note && (!state.spoilerFree || done)) text.appendChild(el("div", "item-note", it.note));
+      row.append(check, text);
+      if (it.mine) {
+        const rm = el("button", "remove", "×"); rm.type = "button"; rm.setAttribute("aria-label", "Remove " + it.name);
+        rm.addEventListener("click", () => removeMine(cat, it));
+        row.appendChild(rm);
+      }
+      nodes.push(row);
+    }
+    const form = el("form", "adder");
+    const input = el("input"); input.placeholder = "Add to " + cat.name; input.autocomplete = "off"; input.setAttribute("aria-label", "Add to " + cat.name);
+    const add = el("button", null, "Add"); add.type = "submit";
+    form.append(input, add);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = input.value.trim(); if (!name) return;
+      (state.custom[cat.id] = state.custom[cat.id] || []).push({ id: uid("mine"), name, mine: true });
+      save(true); render();
+      const again = document.querySelector('input[aria-label="Add to ' + cat.name.replace(/"/g, "") + '"]'); if (again) again.focus();
+    });
+    nodes.push(form);
+    return nodes;
+  }
+
+  function counterView(cat) {
+    const box = el("div", "counter");
+    const value = state.counts[cat.id] || 0;
+    const total = cat.total || state.totals[cat.id] || 0;
+    const minus = el("button", "step", "−"); minus.type = "button"; minus.setAttribute("aria-label", "One less");
+    const plus = el("button", "step", "+"); plus.type = "button"; plus.setAttribute("aria-label", "One more");
+    const tally = el("div", "tally"); const b = el("b", null, String(value)); tally.appendChild(b);
+    const of = el("span", "of");
+    if (cat.total) of.textContent = "of " + cat.total;
+    else {
+      of.append("of ");
+      const t = el("input"); t.type = "number"; t.min = "0"; t.inputMode = "numeric"; t.value = total || ""; t.placeholder = "?"; t.setAttribute("aria-label", "Total for " + cat.name);
+      t.addEventListener("change", () => { const n = parseInt(t.value, 10); if (n > 0) state.totals[cat.id] = n; else delete state.totals[cat.id]; save(true); render(); });
+      of.appendChild(t);
+    }
+    tally.appendChild(of);
+    const set = (n) => { state.counts[cat.id] = Math.max(0, total ? Math.min(n, total) : n); save(true); render(); };
+    minus.addEventListener("click", () => set(value - 1));
+    plus.addEventListener("click", () => set(value + 1));
+    box.append(minus, tally, plus);
+    return box;
+  }
+
+  function toggle(it) {
+    if (state.done[it.id]) delete state.done[it.id]; else state.done[it.id] = Date.now();
+    save(true); render();
+    if (state.done[it.id]) showToast("Done: " + it.name, () => { delete state.done[it.id]; save(true); render(); });
+  }
+  function removeMine(cat, it) {
+    const list = state.custom[cat.id] || [], index = list.indexOf(it.id ? list.find((x) => x.id === it.id) : it);
+    if (index < 0) return;
+    list.splice(index, 1); save(true); render();
+    showToast("Removed: " + it.name, () => { list.splice(index, 0, it); save(true); render(); });
+  }
+  function showToast(text, undo) {
+    lastUndo = undo; $("toastText").textContent = text; $("toast").hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; lastUndo = null; }, 4500);
+  }
+  $("undo").addEventListener("click", () => { if (lastUndo) lastUndo(); lastUndo = null; $("toast").hidden = true; });
+
+  document.querySelectorAll(".chip").forEach((chip) => chip.addEventListener("click", () => {
+    filter = chip.dataset.filter;
+    document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c === chip));
+    render();
+  }));
+  $("search").addEventListener("input", (e) => { query = e.target.value.trim().toLowerCase(); render(); });
+  $("leftOff").addEventListener("input", (e) => { state.note = e.target.value; save(true); $("lastPlayed").textContent = "Last updated just now"; });
+  $("spoilers").addEventListener("click", () => { state.spoilerFree = !state.spoilerFree; save(); render(); });
+  $("newCat").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("newCatName").value.trim(); if (!name) return;
+    const id = uid("list"); state.userCats.push({ id, name, kind: "list", items: [], user: true }); state.open[id] = true;
+    $("newCatName").value = ""; save(true); render();
+  });
+
+  // ---- Backup & sync (same idea as Aurix): a link with the progress packed into its #fragment,
+  // which browsers never send to a server, or a JSON backup file.
+  function pack(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  function unpack(str) { const b = str.replace(/-/g, "+").replace(/_/g, "/"); return JSON.parse(decodeURIComponent(escape(atob(b + "===".slice((b.length + 3) % 4))))); }
+  function portable() { const { open, ...rest } = state; return rest; }
+  function adopt(obj, how) {
+    if (!obj || typeof obj.done !== "object") throw new Error("not a tracker backup");
+    state = Object.assign({ done: {}, counts: {}, totals: {}, custom: {}, userCats: [], open: {}, note: "", lastPlayed: 0, spoilerFree: false }, obj, { open: state.open });
+    save(); render(); $("syncStatus").textContent = "Loaded from " + how + "."; $("syncStatus").className = "status";
+  }
+  $("share").addEventListener("click", () => {
+    const url = location.origin + location.pathname + "#data=" + pack(portable());
+    if (navigator.share) { navigator.share({ title: "GTA VI progress", url }).catch(() => {}); return; }
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(
+      () => { $("syncStatus").textContent = "Link copied. Open it on your other device."; },
+      () => { $("syncStatus").textContent = "Couldn’t copy here. Use Download backup instead."; });
+  });
+  $("download").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(portable(), null, 2)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = "gta6-progress-" + new Date().toISOString().slice(0, 10) + ".json"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  $("restore").addEventListener("click", () => $("file").click());
+  $("file").addEventListener("change", (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    f.text().then((t) => {
+      const obj = JSON.parse(t);
+      if (confirm("Replace this device’s progress with the backup?")) adopt(obj, "the backup file");
+    }).catch(() => { $("syncStatus").textContent = "That file isn’t a tracker backup."; $("syncStatus").className = "status err"; });
+    e.target.value = "";
+  });
+  (function fromLink() {
+    const m = /^#data=([A-Za-z0-9_-]+)$/.exec(location.hash);
+    if (!m) return;
+    history.replaceState(null, "", location.pathname + location.search);
+    try {
+      const obj = unpack(m[1]);
+      setTimeout(() => { if (confirm("Load the progress from this link? It replaces what’s on this device.")) adopt(obj, "the link"); }, 300);
+    } catch (e) { $("syncStatus").textContent = "That link didn’t contain readable progress."; $("syncStatus").className = "status err"; }
+  })();
+
+  render();
+  fetch("data.json", { cache: "no-cache" }).then((r) => r.json()).then((d) => { official = d; render(); }).catch(() => {});
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>

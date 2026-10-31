@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "status": "pre-release",
+  "updated": "2026-10-31",
+  "message": "GTA VI comes out November 19, 2026. The official lists (missions, collectibles, trophies) get filled in after release, once reliable sources publish them. Until then, add your own items.",
+  "categories": [
+    { "id": "story", "name": "Story missions", "kind": "list", "items": [] },
+    { "id": "side", "name": "Side missions & strangers", "kind": "list", "items": [] },
+    { "id": "collectibles", "name": "Collectibles", "kind": "count", "total": null },
+    { "id": "activities", "name": "Activities & hobbies", "kind": "list", "items": [] },
+    { "id": "properties", "name": "Properties & businesses", "kind": "list", "items": [] },
+    { "id": "vehicles", "name": "Vehicles", "kind": "count", "total": null },
+    { "id": "trophies", "name": "Trophies & achievements", "kind": "list", "items": [] }
+  ],
+  "sources": []
+}
