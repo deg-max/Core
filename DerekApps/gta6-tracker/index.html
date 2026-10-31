@@ -388,7 +388,7 @@
     if (state.done[it.id]) showToast("Done: " + it.name, () => { delete state.done[it.id]; save(true); render(); });
   }
   function removeMine(cat, it) {
-    const list = state.custom[cat.id] || [], index = list.indexOf(it.id ? list.find((x) => x.id === it.id) : it);
+    const list = state.custom[cat.id] || [], index = list.findIndex((x) => x.id === it.id);
     if (index < 0) return;
     list.splice(index, 1); save(true); render();
     showToast("Removed: " + it.name, () => { list.splice(index, 0, it); save(true); render(); });
